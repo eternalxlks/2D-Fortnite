@@ -3,37 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Fortnite with Mobile and Keyboard Controls</title>
+    <title>Multiplayer Game with Weapon Unlocks, Inventory & Random Items</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-        }
-
-        canvas {
-            display: block;
-            background: #87CEEB;
-        }
-
-        .controls {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-        }
-
-        .controls button {
-            width: 60px;
-            height: 60px;
-            font-size: 20px;
-            background-color: #333;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-        }
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; background: #87CEEB; }
+        .controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+        .controls button { width: 60px; height: 60px; font-size: 20px; background-color: #333; color: white; border: none; border-radius: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -50,58 +25,93 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Set canvas size dynamically based on window size
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
 
         window.addEventListener("resize", resizeCanvas);
-        resizeCanvas(); // Initial resize
+        resizeCanvas(); 
 
-        // Scale factor for game elements based on canvas size
-        const scaleFactor = canvas.width / 800;
-
+        // Player object
         const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
-            width: 30 * scaleFactor,
-            height: 30 * scaleFactor,
+            width: 30,
+            height: 30,
             color: "blue",
-            speed: 5 * scaleFactor,
+            speed: 5,
             health: 100,
             ammo: 30,
-            weapon: null
+            weapon: null,
+            inventory: [] // Store up to 2 weapons
         };
 
-        const weapons = [
-            { x: 300 * scaleFactor, y: 200 * scaleFactor, width: 20 * scaleFactor, height: 20 * scaleFactor, color: "gold", type: "pistol" },
-            { x: 500 * scaleFactor, y: 400 * scaleFactor, width: 20 * scaleFactor, height: 20 * scaleFactor, color: "silver", type: "rifle" }
+        // Weapons
+        const mythicSkyeAssaultRifle = {
+            name: "Mythic Skye's Assault Rifle",
+            damage: 25,
+            fireRate: 300,
+            ammoCapacity: 100,
+            reloadTime: 2000,
+            color: "#6B3FA0",
+            type: "assault_rifle"
+        };
+
+        const goldPumpShotgun = {
+            name: "Gold Pump Shotgun",
+            damage: 100,
+            fireRate: 1000,
+            ammoCapacity: 5,
+            reloadTime: 2500,
+            color: "#FFD700",
+            type: "shotgun"
+        };
+
+        // Enemy object
+        let enemyCount = 0;
+        const enemies = [];
+
+        // Item spawn chances
+        const commonItems = [
+            mythicSkyeAssaultRifle
         ];
 
-        const bullets = [];
-        const enemies = [
-            { x: 600 * scaleFactor, y: 200 * scaleFactor, width: 30 * scaleFactor, height: 30 * scaleFactor, color: "red", speed: 1 * scaleFactor, damage: 10 },
-            { x: 200 * scaleFactor, y: 300 * scaleFactor, width: 30 * scaleFactor, height: 30 * scaleFactor, color: "red", speed: 1 * scaleFactor, damage: 10 }
+        const legendaryItems = [
+            goldPumpShotgun
         ];
 
-        const ammoItems = [
-            { x: 100 * scaleFactor, y: 100 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green" },
-            { x: 700 * scaleFactor, y: 500 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green" }
-        ];
+        // Random item spawn function
+        function spawnRandomItem() {
+            let spawnChance = Math.random();
+            let item = null;
 
+            if (spawnChance < 0.9) {
+                item = commonItems[Math.floor(Math.random() * commonItems.length)];
+            } else {
+                item = legendaryItems[Math.floor(Math.random() * legendaryItems.length)];
+            }
+
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                item: item
+            };
+        }
+
+        // Boss Object
+        const boss = {
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            width: 100,
+            height: 100,
+            health: 500,
+            color: "purple",
+            defeated: false
+        };
+
+        // Handle movement controls
         let keys = {};
-        let mobileControls = {
-            left: false,
-            up: false,
-            right: false,
-            down: false,
-            shoot: false
-        };
-
-        let goldPumpUnlocked = false;
-        const goldPumpImage = new Image();
-        goldPumpImage.src = "gold_pump.png";
 
         window.addEventListener("keydown", (e) => {
             keys[e.key] = true;
@@ -109,131 +119,101 @@
 
         window.addEventListener("keyup", (e) => {
             keys[e.key] = false;
-            if (e.key === " " && player.weapon) {
-                shootBullet();
-            }
         });
 
-        // Mobile controls
-        function handleMobileControl(event, isPressed) {
-            event.preventDefault();
-            if (event.target.id === "left") mobileControls.left = isPressed;
-            if (event.target.id === "up") mobileControls.up = isPressed;
-            if (event.target.id === "right") mobileControls.right = isPressed;
-            if (event.target.id === "down") mobileControls.down = isPressed;
-            if (event.target.id === "shoot") mobileControls.shoot = isPressed;
+        // Handle movement and shooting
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp") player.y -= player.speed;
+            if (e.key === "ArrowDown") player.y += player.speed;
+            if (e.key === "ArrowLeft") player.x -= player.speed;
+            if (e.key === "ArrowRight") player.x += player.speed;
+        });
+
+        // WebRTC Setup (Same as before)
+        let localConnection;
+        let sendChannel;
+        let receiveChannel;
+
+        let isOfferer = localStorage.getItem("isOfferer") === "true";
+        let signalingKey = "webrtc_game_signal";
+
+        if (isOfferer) {
+            createOffer();
+        } else {
+            createReceiver();
         }
 
-        // For both mouse and touch events (to handle mobile interaction)
-        ["mousedown", "touchstart"].forEach((event) => {
-            document.getElementById("left").addEventListener(event, (e) => handleMobileControl(e, true));
-            document.getElementById("up").addEventListener(event, (e) => handleMobileControl(e, true));
-            document.getElementById("right").addEventListener(event, (e) => handleMobileControl(e, true));
-            document.getElementById("down").addEventListener(event, (e) => handleMobileControl(e, true));
-            document.getElementById("shoot").addEventListener(event, (e) => handleMobileControl(e, true));
-        });
+        function createOffer() {
+            localConnection = new RTCPeerConnection();
+            sendChannel = localConnection.createDataChannel("sendChannel");
 
-        // Reset controls when mouse/touch is released
-        ["mouseup", "touchend"].forEach((event) => {
-            document.getElementById("left").addEventListener(event, (e) => handleMobileControl(e, false));
-            document.getElementById("up").addEventListener(event, (e) => handleMobileControl(e, false));
-            document.getElementById("right").addEventListener(event, (e) => handleMobileControl(e, false));
-            document.getElementById("down").addEventListener(event, (e) => handleMobileControl(e, false));
-            document.getElementById("shoot").addEventListener(event, (e) => handleMobileControl(e, false));
-        });
+            sendChannel.onopen = () => console.log("Data channel opened");
+            sendChannel.onmessage = (e) => handleMessage(e.data);
 
-        function shootBullet() {
-            if (player.weapon && player.ammo > 0) {
-                bullets.push({ x: player.x + player.width / 2 - 5, y: player.y, width: 5 * scaleFactor, height: 5 * scaleFactor, color: "yellow", speed: 10 * scaleFactor });
-                player.ammo--;
-            }
-        }
-
-        function update() {
-            // Player movement
-            if (keys["ArrowUp"] || mobileControls.up) player.y -= player.speed;
-            if (keys["ArrowDown"] || mobileControls.down) player.y += player.speed;
-            if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
-            if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
-
-            // Shooting
-            if (mobileControls.shoot) {
-                shootBullet();
-                mobileControls.shoot = false;
-            }
-
-            // Check for weapon pickup
-            weapons.forEach((weapon, index) => {
-                if (player.x < weapon.x + weapon.width &&
-                    player.x + player.width > weapon.x &&
-                    player.y < weapon.y + weapon.height &&
-                    player.y + player.height > weapon.y) {
-                    player.weapon = weapon.type;
-                    weapons.splice(index, 1);
-                }
-            });
-
-            // Check for ammo pickup
-            ammoItems.forEach((ammo, index) => {
-                if (player.x < ammo.x + ammo.width &&
-                    player.x + player.width > ammo.x &&
-                    player.y < ammo.y + ammo.height &&
-                    player.y + player.height > ammo.y) {
-                    player.ammo += 10;
-                    ammoItems.splice(index, 1);
-                }
-            });
-
-            // Update bullets
-            bullets.forEach((bullet, index) => {
-                bullet.y -= bullet.speed;
-                if (bullet.y < 0) bullets.splice(index, 1);
-            });
-
-            // Bullet-enemy collisions
-            bullets.forEach((bullet, bIndex) => {
-                enemies.forEach((enemy, eIndex) => {
-                    if (bullet.x < enemy.x + enemy.width &&
-                        bullet.x + bullet.width > enemy.x &&
-                        bullet.y < enemy.y + enemy.height &&
-                        bullet.y + bullet.height > enemy.y) {
-                        bullets.splice(bIndex, 1);
-                        enemies.splice(eIndex, 1);
-                        setTimeout(() => {
-                            enemies.push({ x: Math.random() * (canvas.width - 30), y: Math.random() * (canvas.height - 30), width: 30 * scaleFactor, height: 30 * scaleFactor, color: "red", speed: 1 * scaleFactor, damage: 10 });
-                        }, 3000);
-                    }
+            localConnection.createOffer()
+                .then(offer => localConnection.setLocalDescription(offer))
+                .then(() => {
+                    localStorage.setItem(signalingKey, JSON.stringify(localConnection.localDescription));
+                    alert("Offer created, now open this URL in another browser.");
                 });
-            });
+        }
 
-            // Enemy movement and collisions with player
-            enemies.forEach((enemy) => {
-                const dx = player.x - enemy.x;
-                const dy = player.y - enemy.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+        function createReceiver() {
+            localConnection = new RTCPeerConnection();
 
-                if (distance > 0) {
-                    enemy.x += (dx / distance) * enemy.speed;
-                    enemy.y += (dy / distance) * enemy.speed;
-                }
+            localConnection.ondatachannel = (event) => {
+                receiveChannel = event.channel;
+                receiveChannel.onmessage = (e) => handleMessage(e.data);
+            };
 
-                if (player.x < enemy.x + enemy.width &&
-                    player.x + player.width > enemy.x &&
-                    player.y < enemy.y + enemy.height &&
-                    player.y + player.height > enemy.y) {
-                    player.health -= enemy.damage;
-                    if (player.health <= 0) {
-                        alert("Game Over!");
-                        window.location.reload();
-                    }
-                }
-            });
+            let offer = JSON.parse(localStorage.getItem(signalingKey));
+            localConnection.setRemoteDescription(new RTCSessionDescription(offer))
+                .then(() => localConnection.createAnswer())
+                .then(answer => localConnection.setLocalDescription(answer))
+                .then(() => {
+                    localStorage.setItem(signalingKey, JSON.stringify(localConnection.localDescription));
+                });
+        }
 
-            if (enemies.length >= 5 && !goldPumpUnlocked) {
-                goldPumpUnlocked = true;
+        function handleMessage(data) {
+            const playerData = JSON.parse(data);
+            player.x = playerData.x;
+            player.y = playerData.y;
+            player.health = playerData.health;
+            player.ammo = playerData.ammo;
+            if (playerData.weapon) {
+                player.weapon = playerData.weapon;
             }
         }
 
+        // Check for weapon unlock
+        function checkWeaponUnlock() {
+            if (enemyCount >= 10 && !player.inventory.includes(goldPumpShotgun)) {
+                player.inventory.push(goldPumpShotgun);
+            }
+
+            if (enemyCount >= 25 && !player.inventory.includes(mythicSkyeAssaultRifle)) {
+                player.inventory.push(mythicSkyeAssaultRifle);
+            }
+        }
+
+        // Enemy defeat
+        function defeatEnemy() {
+            enemyCount++;
+            checkWeaponUnlock();
+        }
+
+        // Pick up item
+        function pickUpItem(item) {
+            if (player.inventory.length < 2) {
+                player.inventory.push(item);
+            } else {
+                // Swap item if inventory is full
+                player.inventory[0] = item;
+            }
+        }
+
+        // Draw game
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -241,55 +221,30 @@
             ctx.fillStyle = player.color;
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
-            // Draw weapons
-            weapons.forEach((weapon) => {
+            // Draw weapons in inventory
+            player.inventory.forEach((weapon, index) => {
                 ctx.fillStyle = weapon.color;
-                ctx.fillRect(weapon.x, weapon.y, weapon.width, weapon.height);
+                ctx.fillRect(player.x + player.width / 2 - 15, player.y - 30 * (index + 1), 30, 30); // Display weapon above player
             });
 
-            // Draw ammo items
-            ammoItems.forEach((ammo) => {
-                ctx.fillStyle = ammo.color;
-                ctx.fillRect(ammo.x, ammo.y, ammo.width, ammo.height);
+            // Draw items on floor
+            items.forEach(item => {
+                ctx.fillStyle = item.item.color;
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, 10, 0, 2 * Math.PI);
+                ctx.fill();
             });
 
-            // Draw bullets
-            bullets.forEach((bullet) => {
-                ctx.fillStyle = bullet.color;
-                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
-            });
-
-            // Draw enemies
-            enemies.forEach((enemy) => {
-                ctx.fillStyle = enemy.color;
-                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-            });
-
-            // Draw health bar
-            ctx.fillStyle = "green";
-            ctx.fillRect(10, 10, player.health * 2, 20);
-            ctx.strokeStyle = "black";
-            ctx.strokeRect(10, 10, 200, 20);
-
-            // Draw ammo
-            ctx.fillStyle = "black";
-            ctx.font = "20px Arial";
-            ctx.fillText(`Ammo: ${player.ammo}`, canvas.width - 120, 30);
-
-            // Draw weapon name
-            if (player.weapon) {
-                ctx.fillStyle = "black";
-                ctx.fillText(`Weapon: ${player.weapon}`, 10, 50);
-            }
-
-            // Draw gold pump
-            if (goldPumpUnlocked) {
-                ctx.drawImage(goldPumpImage, canvas.width - 100, 50, 40, 40);
+            // Draw boss
+            if (!boss.defeated) {
+                ctx.fillStyle = boss.color;
+                ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
             }
         }
 
+        // Game loop
+        let items = [spawnRandomItem(), spawnRandomItem()]; // Spawn random items
         function gameLoop() {
-            update();
             draw();
             requestAnimationFrame(gameLoop);
         }
