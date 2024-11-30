@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Game with Weapon Unlocks, Inventory & Random Items</title>
+    <title>2D Fighter</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; background: #87CEEB; }
         .controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
         .controls button { width: 60px; height: 60px; font-size: 20px; background-color: #333; color: white; border: none; border-radius: 10px; cursor: pointer; }
+        .controls button:active { background-color: #555; }
     </style>
 </head>
 <body>
@@ -18,7 +19,8 @@
         <button id="up">⬆️</button>
         <button id="right">➡️</button>
         <button id="down">⬇️</button>
-        <button id="shoot">🔫</button>
+        <button id="pickup">🔽</button>
+        <button id="drop">⛔</button>
     </div>
 
     <script>
@@ -47,7 +49,7 @@
             inventory: [] // Store up to 2 weapons
         };
 
-        // Weapons (same as previous)
+        // Weapons
         const mythicSkyeAssaultRifle = {
             name: "Mythic Skye's Assault Rifle",
             damage: 25,
@@ -149,8 +151,12 @@
 
         const randomCommonWeapon = [smg, pistol, revolver, ar, shotgun];
         const randomLegendaryWeapon = [goldPumpShotgun, p90, shockwaveGrenades];
-        
+
         // Random item spawn function
+        let lastSpawnTime = 0;
+        const spawnCooldown = 2000; // 2 seconds cooldown for item spawn
+        let items = [];
+
         function spawnRandomItem() {
             let spawnChance = Math.random();
             let item = null;
@@ -168,31 +174,15 @@
             };
         }
 
-        // Enemy object
-        let enemyCount = 0;
-        const enemies = [];
-
-        // Boss Object
-        const boss = {
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            width: 100,
-            height: 100,
-            health: 500,
-            color: "purple",
-            defeated: false,
-            move() {
-                const targetX = player.x - this.x;
-                const targetY = player.y - this.y;
-                const distance = Math.sqrt(targetX * targetX + targetY * targetY);
-                const speed = 0.5; // Boss moves slower
-
-                if (distance > 5) { // Only move if not too close
-                    this.x += targetX / distance * speed;
-                    this.y += targetY / distance * speed;
+        function trySpawnItem() {
+            const currentTime = Date.now();
+            if (currentTime - lastSpawnTime >= spawnCooldown) {
+                if (items.length < 5) { // Limit items on the screen
+                    items.push(spawnRandomItem());
                 }
+                lastSpawnTime = currentTime;
             }
-        };
+        }
 
         // Handle movement controls
         let keys = {};
@@ -211,133 +201,78 @@
         document.getElementById("right").onclick = () => player.x += player.speed;
         document.getElementById("down").onclick = () => player.y += player.speed;
 
-        // Check for weapon unlock
-        function checkWeaponUnlock() {
-            if (enemyCount >= 10 && !player.inventory.includes(goldPumpShotgun)) {
-                player.inventory.push(goldPumpShotgun);
+        // Pickup and Drop Weapons on Mobile Controls
+        document.getElementById("pickup").onclick = () => pickupWeapon();
+        document.getElementById("drop").onclick = () => dropWeapon();
+
+        // Keyboard controls for pickup/drop
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "e") { // Pickup Weapon with 'E'
+                pickupWeapon();
+            } else if (e.key === "q") { // Drop Weapon with 'Q'
+                dropWeapon();
             }
+        });
 
-            if (enemyCount >= 25 && !player.inventory.includes(mythicSkyeAssaultRifle)) {
-                player.inventory.push(mythicSkyeAssaultRifle);
-            }
-        }
-
-        // Enemy defeat
-        function defeatEnemy() {
-            enemyCount++;
-            checkWeaponUnlock();
-
-            // Spawn new enemy after one is defeated
-            spawnEnemy();
-
-            // Check if the player has defeated 100 enemies
-            if (enemyCount >= 100) {
-                // Display win message
-                alert("You Win! You've defeated 100 enemies!");
-                // Reset the game or stop the game loop
-                cancelAnimationFrame(gameLoopId);
-            }
-        }
-
-        // Spawn a new enemy
-        function spawnEnemy() {
-            const enemy = {
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                width: 30,
-                height: 30,
-                color: "red",
-                move() {
-                    const targetX = player.x - this.x;
-                    const targetY = player.y - this.y;
-                    const distance = Math.sqrt(targetX * targetX + targetY * targetY);
-                    const speed = 2; // Normal enemy speed
-
-                    if (distance > 5) { // Only move if not too close
-                        this.x += targetX / distance * speed;
-                        this.y += targetY / distance * speed;
+        // Pickup Weapon function
+        function pickupWeapon() {
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const distance = Math.sqrt((player.x - item.x) ** 2 + (player.y - item.y) ** 2);
+                if (distance < 50) { // If close enough to pick up
+                    if (player.inventory.length < 2) {
+                        player.inventory.push(item.item);
+                        items.splice(i, 1); // Remove item from the map after pickup
+                        console.log("Weapon picked up:", item.item.name);
+                        break;
+                    } else {
+                        console.log("Inventory full!");
                     }
                 }
-            };
-
-            enemies.push(enemy);
+            }
         }
 
-        // Main game logic
-        function update() {
-            // Move player
-            if (keys["ArrowUp"]) player.y -= player.speed;
-            if (keys["ArrowDown"]) player.y += player.speed;
-            if (keys["ArrowLeft"]) player.x -= player.speed;
-            if (keys["ArrowRight"]) player.x += player.speed;
-
-            // Move enemies and bosses
-            enemies.forEach(enemy => enemy.move());
-            boss.move();
-
-            // Collision detection for defeating enemies
-            enemies.forEach((enemy, index) => {
-                if (Math.abs(player.x - enemy.x) < player.width && Math.abs(player.y - enemy.y) < player.height) {
-                    defeatEnemy();
-                    enemies.splice(index, 1); // Remove defeated enemy
-                }
-            });
-
-            // Random item spawning
-            const randomItem = spawnRandomItem();
-            items.push(randomItem);
-
-            // Update the display
-            draw();
+        // Drop Weapon function
+        function dropWeapon() {
+            if (player.inventory.length > 0) {
+                const weaponToDrop = player.inventory.pop();
+                items.push({
+                    x: player.x,
+                    y: player.y,
+                    item: weaponToDrop
+                });
+                console.log("Weapon dropped:", weaponToDrop.name);
+            } else {
+                console.log("No weapon to drop!");
+            }
         }
 
-        // Drawing game state
-        const items = [];
-
-        function draw() {
+        // Render function
+        function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw player
+            // Draw Player
             ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
 
-            // Draw enemies
-            enemies.forEach(enemy => {
-                ctx.fillStyle = enemy.color;
-                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-            });
+            // Draw Inventory
+            ctx.font = "20px Arial";
+            ctx.fillStyle = "black";
+            ctx.fillText("Inventory: " + player.inventory.map(w => w.name).join(", "), 10, 30);
 
-            // Draw boss
-            if (!boss.defeated) {
-                ctx.fillStyle = boss.color;
-                ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
-            }
-
-            // Draw items
+            // Draw Items on ground
             items.forEach(item => {
-                ctx.fillStyle = item.item.color;
                 ctx.beginPath();
-                ctx.arc(item.x, item.y, 10, 0, 2 * Math.PI);
+                ctx.arc(item.x, item.y, 15, 0, Math.PI * 2);
+                ctx.fillStyle = item.item.color;
                 ctx.fill();
             });
 
-            // Draw item names and rarity
-            items.forEach(item => {
-                ctx.fillStyle = "black";
-                ctx.fillText(item.item.name, item.x + 10, item.y);
-                ctx.fillText(item.item.rarity, item.x + 10, item.y + 10);
-            });
+            // Call requestAnimationFrame
+            requestAnimationFrame(render);
         }
 
-        // Game loop
-        let gameLoopId;
-        function gameLoop() {
-            draw();
-            update();
-            gameLoopId = requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop(); // Start the game loop
+        render(); // Start the rendering loop
     </script>
 </body>
 </html>
