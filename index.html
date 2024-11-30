@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Fortnite with Mobile Controls</title>
+    <title>2D Fortnite with Mobile and Keyboard Controls</title>
     <style>
         body {
             margin: 0;
@@ -98,7 +98,8 @@
         document.getElementById("up").addEventListener("mouseup", () => mobileControls.up = false);
         document.getElementById("right").addEventListener("mousedown", () => mobileControls.right = true);
         document.getElementById("right").addEventListener("mouseup", () => mobileControls.right = false);
-        document.getElementById("shoot").addEventListener("mousedown", shootBullet);
+        document.getElementById("shoot").addEventListener("mousedown", () => mobileControls.shoot = true);
+        document.getElementById("shoot").addEventListener("mouseup", () => mobileControls.shoot = false);
 
         // Helper function for shooting bullets
         function shootBullet() {
@@ -121,6 +122,12 @@
             if (keys["ArrowDown"]) player.y += player.speed;
             if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
             if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
+
+            // Shoot bullets on mobile
+            if (mobileControls.shoot) {
+                shootBullet();
+                mobileControls.shoot = false; // Prevent continuous shooting
+            }
 
             // Weapon pickup
             weapons.forEach((weapon, index) => {
