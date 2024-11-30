@@ -132,6 +132,9 @@
             shoot: false
         };
 
+        let enemySpawnCooldown = 1000; // 1 second cooldown between spawns
+        let lastEnemySpawnTime = 0; // Track the time of the last spawn
+
         // Event listeners for keyboard input
         window.addEventListener("keydown", (e) => {
             keys[e.key] = true;
@@ -203,9 +206,10 @@
                 }
             });
 
-            // Spawn enemies and items after defeating one
-            if (defeatedEnemies < 100) {
+            // Spawn enemies if conditions are met
+            if (defeatedEnemies < 100 && (Date.now() - lastEnemySpawnTime > enemySpawnCooldown)) {
                 spawnEnemy();
+                lastEnemySpawnTime = Date.now();
             }
 
             // Update bullets
@@ -240,44 +244,32 @@
                 }
             });
 
+            // Check win condition: Defeat 100 enemies
+            if (defeatedEnemies >= 100) {
+                ctx.fillStyle = "black";
+                ctx.font = "30px Arial";
+                ctx.fillText("You Win!", canvas.width / 2 - 75, canvas.height / 2);
+                return;
+            }
+
             // Health check: reset player if health is 0
             if (player.health <= 0) {
                 resetGame();
             }
+
+            // Draw everything
+            draw();
+            requestAnimationFrame(update);
         }
 
-        // Spawn an enemy
-        function spawnEnemy() {
-            enemies.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                width: 30 * scaleFactor,
-                height: 30 * scaleFactor,
-                color: "red",
-                speed: 1 * scaleFactor,
-                health: 20
-            });
-        }
-
-        // Draw all game elements
+        // Function to draw everything
         function draw() {
+            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // Draw player
             ctx.fillStyle = player.color;
             ctx.fillRect(player.x, player.y, player.width, player.height);
-
-            // Draw weapons on the ground
-            weapons.forEach((weapon) => {
-                ctx.fillStyle = weapon.color;
-                ctx.fillRect(weapon.x, weapon.y, weapon.width, weapon.height);
-            });
-
-            // Draw enemies
-            enemies.forEach((enemy) => {
-                ctx.fillStyle = enemy.color;
-                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-            });
 
             // Draw bullets
             bullets.forEach((bullet) => {
@@ -285,32 +277,43 @@
                 ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             });
 
+            // Draw enemies
+            enemies.forEach((enemy) => {
+                ctx.fillStyle = "red";
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+
             // Draw health bar
-            document.getElementById("health-fill").style.width = player.health + "%";
+            document.getElementById("health-fill").style.width = `${player.health}%`;
 
             // Draw ammo bar
-            document.getElementById("ammo-fill").style.width = (player.ammo / 30) * 100 + "%";
+            document.getElementById("ammo-fill").style.width = `${(player.ammo / 30) * 100}%`;
         }
 
-        // Reset the game when health reaches 0
+        // Spawn a new enemy
+        function spawnEnemy() {
+            const enemy = {
+                x: Math.random() * (canvas.width - 30),
+                y: Math.random() * (canvas.height - 30),
+                width: 30 * scaleFactor,
+                height: 30 * scaleFactor,
+                speed: 1 * scaleFactor
+            };
+            enemies.push(enemy);
+        }
+
+        // Reset the game
         function resetGame() {
             player.x = canvas.width / 2;
             player.y = canvas.height / 2;
             player.health = 100;
             player.ammo = 30;
-            bullets.length = 0;
-            enemies.length = 0;
             defeatedEnemies = 0;
+            enemies.length = 0;
         }
 
-        // Main game loop
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
+        // Start the game loop
+        update();
     </script>
 </body>
 </html>
