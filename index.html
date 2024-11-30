@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Fortnite</title>
+    <title>2D Fortnite </title>
     <style>
         body {
             margin: 0;
@@ -27,12 +27,13 @@
 
         // Player object
         const player = {
-            x: 100,
-            y: 100,
+            x: 400,
+            y: 300,
             width: 30,
             height: 30,
             color: "blue",
             speed: 5,
+            health: 100,
             weapon: null, // Current weapon
         };
 
@@ -47,8 +48,8 @@
 
         // Enemies
         const enemies = [
-            { x: 600, y: 200, width: 30, height: 30, color: "red" },
-            { x: 200, y: 300, width: 30, height: 30, color: "red" },
+            { x: 600, y: 200, width: 30, height: 30, color: "red", speed: 1, damage: 10 },
+            { x: 200, y: 300, width: 30, height: 30, color: "red", speed: 1, damage: 10 },
         ];
 
         // Controls
@@ -114,8 +115,47 @@
                     ) {
                         bullets.splice(bIndex, 1); // Remove bullet
                         enemies.splice(eIndex, 1); // Remove enemy
+
+                        // Respawn enemy after 3 seconds
+                        setTimeout(() => {
+                            enemies.push({
+                                x: Math.random() * (canvas.width - 30),
+                                y: Math.random() * (canvas.height - 30),
+                                width: 30,
+                                height: 30,
+                                color: "red",
+                                speed: 1,
+                                damage: 10,
+                            });
+                        }, 3000);
                     }
                 });
+            });
+
+            // Enemy movement and damage
+            enemies.forEach((enemy) => {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > 0) {
+                    enemy.x += (dx / distance) * enemy.speed;
+                    enemy.y += (dy / distance) * enemy.speed;
+                }
+
+                // Check for collision with player
+                if (
+                    player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y
+                ) {
+                    player.health -= enemy.damage; // Reduce player health
+                    if (player.health <= 0) {
+                        alert("Game Over!");
+                        window.location.reload(); // Restart game
+                    }
+                }
             });
         }
 
@@ -145,10 +185,16 @@
                 ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
             });
 
+            // Draw health bar
+            ctx.fillStyle = "green";
+            ctx.fillRect(10, 10, player.health * 2, 20); // Scale health to fit the bar
+            ctx.strokeStyle = "black";
+            ctx.strokeRect(10, 10, 200, 20); // Draw health bar outline
+
             // Draw current weapon
             if (player.weapon) {
                 ctx.fillStyle = "black";
-                ctx.fillText(`Weapon: ${player.weapon}`, 10, 20);
+                ctx.fillText(`Weapon: ${player.weapon}`, 10, 50);
             }
         }
 
