@@ -118,8 +118,8 @@
         ];
 
         const ammoItems = [
-            { x: 100 * scaleFactor, y: 100 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green" },
-            { x: 700 * scaleFactor, y: 500 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green" }
+            { x: 100 * scaleFactor, y: 100 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "yellow" },
+            { x: 700 * scaleFactor, y: 500 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "yellow" }
         ];
 
         const enemies = [];
@@ -182,6 +182,21 @@
             }
         }
 
+        // Spawn an enemy at a random position
+        function spawnEnemy() {
+            const enemySize = 30 * scaleFactor;
+            const enemy = {
+                x: Math.random() * (canvas.width - enemySize),
+                y: Math.random() * (canvas.height - enemySize),
+                width: enemySize,
+                height: enemySize,
+                color: "red",
+                speed: 2 * scaleFactor,
+                health: 50
+            };
+            enemies.push(enemy);
+        }
+
         // Update function for the game loop
         function update() {
             // Player movement
@@ -210,34 +225,37 @@
                     player.y < ammo.y + ammo.height &&
                     player.y + player.height > ammo.y) {
                     player.ammo += 10;
-                    ammoItems.splice(index, 1);
+                    ammoItems.splice(index, 1); // Remove ammo item after pickup
                 }
             });
 
-            // Update bullets
+            // Move bullets
             bullets.forEach((bullet, index) => {
-                bullet.y -= bullet.speed;
-                if (bullet.y < 0) bullets.splice(index, 1);
+                bullet.y -= bullet.speed; // Move upwards
+                if (bullet.y < 0) bullets.splice(index, 1); // Remove bullet if it goes off-screen
             });
 
-            // Bullet-enemy collisions
-            bullets.forEach((bullet, bIndex) => {
-                enemies.forEach((enemy, eIndex) => {
-                    if (bullet.x < enemy.x + enemy.width &&
-                        bullet.x + bullet.width > enemy.x &&
-                        bullet.y < enemy.y + enemy.height &&
-                        bullet.y + bullet.height > enemy.y) {
-                        bullets.splice(bIndex, 1);
-                        enemies.splice(eIndex, 1);
-                        defeatedEnemies++;
-                    }
-                });
+            // Spawn enemies at intervals
+            if (Math.random() < 0.01) spawnEnemy();
+
+            // Move enemies
+            enemies.forEach((enemy) => {
+                // Enemies move randomly
+                enemy.x += (Math.random() - 0.5) * enemy.speed;
+                enemy.y += (Math.random() - 0.5) * enemy.speed;
+
+                // Check for collision with player
+                if (player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y) {
+                    player.health -= 5; // Player takes damage when touching an enemy
+                }
             });
 
-            // Update health bar
+            // Update health and ammo bars
             document.getElementById("health-fill").style.width = player.health + "%";
-            // Update ammo bar
-            document.getElementById("ammo-fill").style.width = player.ammo + "%";
+            document.getElementById("ammo-fill").style.width = (player.ammo / 100) * 100 + "%"; // Update ammo bar
         }
 
         // Draw game elements (including health and ammo bars)
@@ -258,6 +276,12 @@
             ammoItems.forEach((ammo) => {
                 ctx.fillStyle = ammo.color;
                 ctx.fillRect(ammo.x, ammo.y, ammo.width, ammo.height);
+            });
+
+            // Draw enemies
+            enemies.forEach((enemy) => {
+                ctx.fillStyle = enemy.color;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
             });
 
             // Draw defeated enemies count
