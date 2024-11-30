@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Fighter</title>
+    <title>Multiplayer Game with Weapon Unlocks, Inventory & Random Items</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; background: #87CEEB; }
@@ -47,7 +47,7 @@
             inventory: [] // Store up to 2 weapons
         };
 
-        // Weapons
+        // Weapons (same as previous)
         const mythicSkyeAssaultRifle = {
             name: "Mythic Skye's Assault Rifle",
             damage: 25,
@@ -182,9 +182,15 @@
             color: "purple",
             defeated: false,
             move() {
-                // Move randomly for fun
-                this.x += Math.random() * 2 - 1;
-                this.y += Math.random() * 2 - 1;
+                const targetX = player.x - this.x;
+                const targetY = player.y - this.y;
+                const distance = Math.sqrt(targetX * targetX + targetY * targetY);
+                const speed = 0.5; // Boss moves slower
+
+                if (distance > 5) { // Only move if not too close
+                    this.x += targetX / distance * speed;
+                    this.y += targetY / distance * speed;
+                }
             }
         };
 
@@ -221,6 +227,9 @@
             enemyCount++;
             checkWeaponUnlock();
 
+            // Spawn new enemy after one is defeated
+            spawnEnemy();
+
             // Check if the player has defeated 100 enemies
             if (enemyCount >= 100) {
                 // Display win message
@@ -230,35 +239,61 @@
             }
         }
 
-        // Pick up item
-        function pickUpItem(item) {
-            if (player.inventory.length < 2) {
-                player.inventory.push(item);
-            } else {
-                // Swap item if inventory is full
-                player.inventory[0] = item;
-            }
+        // Spawn a new enemy
+        function spawnEnemy() {
+            const enemy = {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                width: 30,
+                height: 30,
+                color: "red",
+                move() {
+                    const targetX = player.x - this.x;
+                    const targetY = player.y - this.y;
+                    const distance = Math.sqrt(targetX * targetX + targetY * targetY);
+                    const speed = 2; // Normal enemy speed
+
+                    if (distance > 5) { // Only move if not too close
+                        this.x += targetX / distance * speed;
+                        this.y += targetY / distance * speed;
+                    }
+                }
+            };
+
+            enemies.push(enemy);
         }
 
-        // Check if the player is close enough to pick up an item
-        function checkItemPickup() {
-            items.forEach(item => {
-                if (Math.abs(player.x - item.x) < 30 && Math.abs(player.y - item.y) < 30) {
-                    pickUpItem(item.item);
+        // Main game logic
+        function update() {
+            // Move player
+            if (keys["ArrowUp"]) player.y -= player.speed;
+            if (keys["ArrowDown"]) player.y += player.speed;
+            if (keys["ArrowLeft"]) player.x -= player.speed;
+            if (keys["ArrowRight"]) player.x += player.speed;
+
+            // Move enemies and bosses
+            enemies.forEach(enemy => enemy.move());
+            boss.move();
+
+            // Collision detection for defeating enemies
+            enemies.forEach((enemy, index) => {
+                if (Math.abs(player.x - enemy.x) < player.width && Math.abs(player.y - enemy.y) < player.height) {
+                    defeatEnemy();
+                    enemies.splice(index, 1); // Remove defeated enemy
                 }
             });
+
+            // Random item spawning
+            const randomItem = spawnRandomItem();
+            items.push(randomItem);
+
+            // Update the display
+            draw();
         }
 
-        // Update game state
-        function update() {
-            boss.move(); // Make the boss move randomly
+        // Drawing game state
+        const items = [];
 
-            checkItemPickup(); // Check if player can pick up items
-            requestAnimationFrame(update);
-        }
-
-        // Draw game
-        let items = [spawnRandomItem(), spawnRandomItem()]; // Spawn random items
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -266,21 +301,10 @@
             ctx.fillStyle = player.color;
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
-            // Draw weapons in inventory
-            player.inventory.forEach((weapon, index) => {
-                ctx.fillStyle = weapon.color;
-                ctx.fillRect(player.x + player.width / 2 - 15, player.y - 30 * (index + 1), 30, 30); // Display weapon above player
-                ctx.fillText(weapon.rarity, player.x + player.width / 2 - 15, player.y - 30 * (index + 1) - 5); // Show rarity text
-            });
-
-            // Draw items on floor
-            items.forEach(item => {
-                ctx.fillStyle = item.item.color;
-                ctx.beginPath();
-                ctx.arc(item.x, item.y, 10, 0, 2 * Math.PI);
-                ctx.fill();
-                ctx.fillStyle = "black";
-                ctx.fillText(item.item.rarity, item.x - 10, item.y - 10); // Show item rarity text
+            // Draw enemies
+            enemies.forEach(enemy => {
+                ctx.fillStyle = enemy.color;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
             });
 
             // Draw boss
@@ -288,6 +312,21 @@
                 ctx.fillStyle = boss.color;
                 ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
             }
+
+            // Draw items
+            items.forEach(item => {
+                ctx.fillStyle = item.item.color;
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, 10, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Draw item names and rarity
+            items.forEach(item => {
+                ctx.fillStyle = "black";
+                ctx.fillText(item.item.name, item.x + 10, item.y);
+                ctx.fillText(item.item.rarity, item.x + 10, item.y + 10);
+            });
         }
 
         // Game loop
