@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Game with Weapon Unlocks, Inventory & Random Items</title>
+    <title>2D Fighter</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; background: #87CEEB; }
@@ -55,7 +55,8 @@
             ammoCapacity: 100,
             reloadTime: 2000,
             color: "#6B3FA0",
-            type: "assault_rifle"
+            type: "assault_rifle",
+            rarity: "Mythic"
         };
 
         const goldPumpShotgun = {
@@ -65,31 +66,99 @@
             ammoCapacity: 5,
             reloadTime: 2500,
             color: "#FFD700",
-            type: "shotgun"
+            type: "shotgun",
+            rarity: "Legendary"
         };
 
-        // Enemy object
-        let enemyCount = 0;
-        const enemies = [];
+        const p90 = {
+            name: "P90",
+            damage: 20,
+            fireRate: 200,
+            ammoCapacity: 50,
+            reloadTime: 1500,
+            color: "#FFD700",
+            type: "smg",
+            rarity: "Legendary"
+        };
 
-        // Item spawn chances
-        const commonItems = [
-            mythicSkyeAssaultRifle
-        ];
+        const shockwaveGrenades = {
+            name: "Shockwave Grenades",
+            damage: 0,
+            fireRate: 0,
+            ammoCapacity: 3,
+            reloadTime: 1000,
+            color: "#FF1493",
+            type: "grenade",
+            rarity: "Legendary"
+        };
 
-        const legendaryItems = [
-            goldPumpShotgun
-        ];
+        const smg = {
+            name: "SMG",
+            damage: 15,
+            fireRate: 400,
+            ammoCapacity: 30,
+            reloadTime: 1000,
+            color: "#808080",
+            type: "smg",
+            rarity: "Common"
+        };
 
+        const pistol = {
+            name: "Pistol",
+            damage: 10,
+            fireRate: 500,
+            ammoCapacity: 15,
+            reloadTime: 1200,
+            color: "#808080",
+            type: "pistol",
+            rarity: "Common"
+        };
+
+        const revolver = {
+            name: "Revolver",
+            damage: 30,
+            fireRate: 700,
+            ammoCapacity: 6,
+            reloadTime: 1500,
+            color: "#808080",
+            type: "revolver",
+            rarity: "Common"
+        };
+
+        const ar = {
+            name: "Assault Rifle",
+            damage: 25,
+            fireRate: 300,
+            ammoCapacity: 30,
+            reloadTime: 2000,
+            color: "#808080",
+            type: "ar",
+            rarity: "Common"
+        };
+
+        const shotgun = {
+            name: "Shotgun",
+            damage: 40,
+            fireRate: 800,
+            ammoCapacity: 5,
+            reloadTime: 2500,
+            color: "#808080",
+            type: "shotgun",
+            rarity: "Common"
+        };
+
+        const randomCommonWeapon = [smg, pistol, revolver, ar, shotgun];
+        const randomLegendaryWeapon = [goldPumpShotgun, p90, shockwaveGrenades];
+        
         // Random item spawn function
         function spawnRandomItem() {
             let spawnChance = Math.random();
             let item = null;
 
-            if (spawnChance < 0.9) {
-                item = commonItems[Math.floor(Math.random() * commonItems.length)];
-            } else {
-                item = legendaryItems[Math.floor(Math.random() * legendaryItems.length)];
+            if (spawnChance < 0.8) { // 80% Common
+                item = randomCommonWeapon[Math.floor(Math.random() * randomCommonWeapon.length)];
+            } else { // 20% Legendary
+                item = randomLegendaryWeapon[Math.floor(Math.random() * randomLegendaryWeapon.length)];
             }
 
             return {
@@ -99,6 +168,10 @@
             };
         }
 
+        // Enemy object
+        let enemyCount = 0;
+        const enemies = [];
+
         // Boss Object
         const boss = {
             x: Math.random() * canvas.width,
@@ -107,7 +180,12 @@
             height: 100,
             health: 500,
             color: "purple",
-            defeated: false
+            defeated: false,
+            move() {
+                // Move randomly for fun
+                this.x += Math.random() * 2 - 1;
+                this.y += Math.random() * 2 - 1;
+            }
         };
 
         // Handle movement controls
@@ -121,70 +199,11 @@
             keys[e.key] = false;
         });
 
-        // Handle movement and shooting
-        window.addEventListener("keydown", (e) => {
-            if (e.key === "ArrowUp") player.y -= player.speed;
-            if (e.key === "ArrowDown") player.y += player.speed;
-            if (e.key === "ArrowLeft") player.x -= player.speed;
-            if (e.key === "ArrowRight") player.x += player.speed;
-        });
-
-        // WebRTC Setup (Same as before)
-        let localConnection;
-        let sendChannel;
-        let receiveChannel;
-
-        let isOfferer = localStorage.getItem("isOfferer") === "true";
-        let signalingKey = "webrtc_game_signal";
-
-        if (isOfferer) {
-            createOffer();
-        } else {
-            createReceiver();
-        }
-
-        function createOffer() {
-            localConnection = new RTCPeerConnection();
-            sendChannel = localConnection.createDataChannel("sendChannel");
-
-            sendChannel.onopen = () => console.log("Data channel opened");
-            sendChannel.onmessage = (e) => handleMessage(e.data);
-
-            localConnection.createOffer()
-                .then(offer => localConnection.setLocalDescription(offer))
-                .then(() => {
-                    localStorage.setItem(signalingKey, JSON.stringify(localConnection.localDescription));
-                    alert("Offer created, now open this URL in another browser.");
-                });
-        }
-
-        function createReceiver() {
-            localConnection = new RTCPeerConnection();
-
-            localConnection.ondatachannel = (event) => {
-                receiveChannel = event.channel;
-                receiveChannel.onmessage = (e) => handleMessage(e.data);
-            };
-
-            let offer = JSON.parse(localStorage.getItem(signalingKey));
-            localConnection.setRemoteDescription(new RTCSessionDescription(offer))
-                .then(() => localConnection.createAnswer())
-                .then(answer => localConnection.setLocalDescription(answer))
-                .then(() => {
-                    localStorage.setItem(signalingKey, JSON.stringify(localConnection.localDescription));
-                });
-        }
-
-        function handleMessage(data) {
-            const playerData = JSON.parse(data);
-            player.x = playerData.x;
-            player.y = playerData.y;
-            player.health = playerData.health;
-            player.ammo = playerData.ammo;
-            if (playerData.weapon) {
-                player.weapon = playerData.weapon;
-            }
-        }
+        // Mobile Controls (Move player)
+        document.getElementById("left").onclick = () => player.x -= player.speed;
+        document.getElementById("up").onclick = () => player.y -= player.speed;
+        document.getElementById("right").onclick = () => player.x += player.speed;
+        document.getElementById("down").onclick = () => player.y += player.speed;
 
         // Check for weapon unlock
         function checkWeaponUnlock() {
@@ -201,6 +220,14 @@
         function defeatEnemy() {
             enemyCount++;
             checkWeaponUnlock();
+
+            // Check if the player has defeated 100 enemies
+            if (enemyCount >= 100) {
+                // Display win message
+                alert("You Win! You've defeated 100 enemies!");
+                // Reset the game or stop the game loop
+                cancelAnimationFrame(gameLoopId);
+            }
         }
 
         // Pick up item
@@ -213,7 +240,25 @@
             }
         }
 
+        // Check if the player is close enough to pick up an item
+        function checkItemPickup() {
+            items.forEach(item => {
+                if (Math.abs(player.x - item.x) < 30 && Math.abs(player.y - item.y) < 30) {
+                    pickUpItem(item.item);
+                }
+            });
+        }
+
+        // Update game state
+        function update() {
+            boss.move(); // Make the boss move randomly
+
+            checkItemPickup(); // Check if player can pick up items
+            requestAnimationFrame(update);
+        }
+
         // Draw game
+        let items = [spawnRandomItem(), spawnRandomItem()]; // Spawn random items
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -225,6 +270,7 @@
             player.inventory.forEach((weapon, index) => {
                 ctx.fillStyle = weapon.color;
                 ctx.fillRect(player.x + player.width / 2 - 15, player.y - 30 * (index + 1), 30, 30); // Display weapon above player
+                ctx.fillText(weapon.rarity, player.x + player.width / 2 - 15, player.y - 30 * (index + 1) - 5); // Show rarity text
             });
 
             // Draw items on floor
@@ -233,6 +279,8 @@
                 ctx.beginPath();
                 ctx.arc(item.x, item.y, 10, 0, 2 * Math.PI);
                 ctx.fill();
+                ctx.fillStyle = "black";
+                ctx.fillText(item.item.rarity, item.x - 10, item.y - 10); // Show item rarity text
             });
 
             // Draw boss
@@ -243,13 +291,14 @@
         }
 
         // Game loop
-        let items = [spawnRandomItem(), spawnRandomItem()]; // Spawn random items
+        let gameLoopId;
         function gameLoop() {
             draw();
-            requestAnimationFrame(gameLoop);
+            update();
+            gameLoopId = requestAnimationFrame(gameLoop);
         }
 
-        gameLoop();
+        gameLoop(); // Start the game loop
     </script>
 </body>
 </html>
