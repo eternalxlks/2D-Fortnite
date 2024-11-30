@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Fortnite </title>
+    <title>2D Fortnite with Mobile Controls</title>
     <style>
         body {
             margin: 0;
@@ -13,10 +13,34 @@
             display: block;
             background: #87CEEB;
         }
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+        .controls button {
+            width: 60px;
+            height: 60px;
+            font-size: 20px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div class="controls">
+        <button id="left">⬅️</button>
+        <button id="up">⬆️</button>
+        <button id="right">➡️</button>
+        <button id="shoot">🔫</button>
+    </div>
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
@@ -54,36 +78,49 @@
 
         // Controls
         const keys = {};
+        const mobileControls = { left: false, up: false, right: false, shoot: false };
 
-        // Event listeners
+        // Event listeners for keyboard
         window.addEventListener("keydown", (e) => {
             keys[e.key] = true;
         });
         window.addEventListener("keyup", (e) => {
             keys[e.key] = false;
-
-            // Handle shooting
-            if (e.key === " ") {
-                if (player.weapon) {
-                    bullets.push({
-                        x: player.x + player.width / 2 - 5,
-                        y: player.y,
-                        width: 5,
-                        height: 5,
-                        color: "yellow",
-                        speed: 10,
-                    });
-                }
+            if (e.key === " " && player.weapon) {
+                shootBullet();
             }
         });
+
+        // Mobile controls
+        document.getElementById("left").addEventListener("mousedown", () => mobileControls.left = true);
+        document.getElementById("left").addEventListener("mouseup", () => mobileControls.left = false);
+        document.getElementById("up").addEventListener("mousedown", () => mobileControls.up = true);
+        document.getElementById("up").addEventListener("mouseup", () => mobileControls.up = false);
+        document.getElementById("right").addEventListener("mousedown", () => mobileControls.right = true);
+        document.getElementById("right").addEventListener("mouseup", () => mobileControls.right = false);
+        document.getElementById("shoot").addEventListener("mousedown", shootBullet);
+
+        // Helper function for shooting bullets
+        function shootBullet() {
+            if (player.weapon) {
+                bullets.push({
+                    x: player.x + player.width / 2 - 5,
+                    y: player.y,
+                    width: 5,
+                    height: 5,
+                    color: "yellow",
+                    speed: 10,
+                });
+            }
+        }
 
         // Update game state
         function update() {
             // Player movement
-            if (keys["ArrowUp"]) player.y -= player.speed;
+            if (keys["ArrowUp"] || mobileControls.up) player.y -= player.speed;
             if (keys["ArrowDown"]) player.y += player.speed;
-            if (keys["ArrowLeft"]) player.x -= player.speed;
-            if (keys["ArrowRight"]) player.x += player.speed;
+            if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
+            if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
 
             // Weapon pickup
             weapons.forEach((weapon, index) => {
