@@ -1,1 +1,288 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>2D Fortnite with Mobile and Keyboard Controls</title><style>body{margin:0;overflow:hidden;}canvas{display:block;background:#87CEEB;}.controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px;}.controls button{width:60px;height:60px;font-size:20px;background-color:#333;color:white;border:none;border-radius:10px;cursor:pointer;}</style></head><body><canvas id="gameCanvas"></canvas><div class="controls"><button id="left">⬅️</button><button id="up">⬆️</button><button id="right">➡️</button><button id="down">⬇️</button><button id="shoot">🔫</button></div><script>const canvas=document.getElementById("gameCanvas"),ctx=canvas.getContext("2d");canvas.width=800;canvas.height=600;const player={x:400,y:300,width:30,height:30,color:"blue",speed:5,health:100,ammo:30,weapon:null};const weapons=[{x:300,y:200,width:20,height:20,color:"gold",type:"pistol"},{x:500,y:400,width:20,height:20,color:"silver",type:"rifle"}];const bullets=[];const enemies=[{x:600,y:200,width:30,height:30,color:"red",speed:1,damage:10},{x:200,y:300,width:30,height:30,color:"red",speed:1,damage:10}];const ammoItems=[{x:100,y:100,width:15,height:15,color:"green"},{x:700,y:500,width:15,height:15,color:"green"}];let keys={},mobileControls={left:false,up:false,right:false,down:false,shoot:false},goldPumpUnlocked=false,goldPumpImage=new Image();goldPumpImage.src="gold_pump.png";window.addEventListener("keydown",(e)=>{keys[e.key]=true;});window.addEventListener("keyup",(e)=>{keys[e.key]=false;if(e.key===" "&&player.weapon){shootBullet();}});document.getElementById("left").addEventListener("mousedown",()=>mobileControls.left=true);document.getElementById("left").addEventListener("mouseup",()=>mobileControls.left=false);document.getElementById("up").addEventListener("mousedown",()=>mobileControls.up=true);document.getElementById("up").addEventListener("mouseup",()=>mobileControls.up=false);document.getElementById("right").addEventListener("mousedown",()=>mobileControls.right=true);document.getElementById("right").addEventListener("mouseup",()=>mobileControls.right=false);document.getElementById("down").addEventListener("mousedown",()=>mobileControls.down=true);document.getElementById("down").addEventListener("mouseup",()=>mobileControls.down=false);document.getElementById("shoot").addEventListener("mousedown",()=>mobileControls.shoot=true);document.getElementById("shoot").addEventListener("mouseup",()=>mobileControls.shoot=false);function shootBullet(){if(player.weapon&&player.ammo>0){bullets.push({x:player.x+player.width/2-5,y:player.y,width:5,height:5,color:"yellow",speed:10});player.ammo--;}}function update(){if(keys["ArrowUp"]||mobileControls.up)player.y-=player.speed;if(keys["ArrowDown"]||mobileControls.down)player.y+=player.speed;if(keys["ArrowLeft"]||mobileControls.left)player.x-=player.speed;if(keys["ArrowRight"]||mobileControls.right)player.x+=player.speed;if(mobileControls.shoot){shootBullet();mobileControls.shoot=false;}weapons.forEach((weapon,index)=>{if(player.x<weapon.x+weapon.width&&player.x+player.width>weapon.x&&player.y<weapon.y+weapon.height&&player.y+player.height>weapon.y){player.weapon=weapon.type;weapons.splice(index,1);}});ammoItems.forEach((ammo,index)=>{if(player.x<ammo.x+ammo.width&&player.x+player.width>ammo.x&&player.y<ammo.y+ammo.height&&player.y+player.height>ammo.y){player.ammo+=10;ammoItems.splice(index,1);}});bullets.forEach((bullet,index)=>{bullet.y-=bullet.speed;if(bullet.y<0)bullets.splice(index,1);});bullets.forEach((bullet,bIndex)=>{enemies.forEach((enemy,eIndex)=>{if(bullet.x<enemy.x+enemy.width&&bullet.x+bullet.width>enemy.x&&bullet.y<enemy.y+enemy.height&&bullet.y+bullet.height>enemy.y){bullets.splice(bIndex,1);enemies.splice(eIndex,1);setTimeout(()=>{enemies.push({x:Math.random()*(canvas.width-30),y:Math.random()*(canvas.height-30),width:30,height:30,color:"red",speed:1,damage:10});},3000);}}});});enemies.forEach((enemy)=>{const dx=player.x-enemy.x,dy=player.y-enemy.y,distance=Math.sqrt(dx*dx+dy*dy);if(distance>0){enemy.x+=(dx/distance)*enemy.speed;enemy.y+=(dy/distance)*enemy.speed;}if(player.x<enemy.x+enemy.width&&player.x+player.width>enemy.x&&player.y<enemy.y+enemy.height&&player.y+player.height>enemy.y){player.health-=enemy.damage;if(player.health<=0){alert("Game Over!");window.location.reload();}}});if(enemies.length>=5&&!goldPumpUnlocked){goldPumpUnlocked=true;}}function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle=player.color;ctx.fillRect(player.x,player.y,player.width,player.height);weapons.forEach((weapon)=>{ctx.fillStyle=weapon.color;ctx.fillRect(weapon.x,weapon.y,weapon.width,weapon.height);});ammoItems.forEach((ammo)=>{ctx.fillStyle=ammo.color;ctx.fillRect(ammo.x,ammo.y,ammo.width,ammo.height);});bullets.forEach((bullet)=>{ctx.fillStyle=bullet.color;ctx.fillRect(bullet.x,bullet.y,bullet.width,bullet.height);});enemies.forEach((enemy)=>{ctx.fillStyle=enemy.color;ctx.fillRect(enemy.x,enemy.y,enemy.width,enemy.height);});ctx.fillStyle="green";ctx.fillRect(10,10,player.health*2,20);ctx.strokeStyle="black";ctx.strokeRect(10,10,200,20);ctx.fillStyle="black";ctx.font="16px Arial";ctx.fillText(`Ammo: ${player.ammo}`,10,50);if(goldPumpUnlocked){ctx.drawImage(goldPumpImage,player.x-40,player.y-40,30,30);ctx.fillText("Weapon: Gold Pump",10,80);}else if(player.weapon){ctx.fillText(`Weapon: ${player.weapon}`,10,80);}}function gameLoop(){update();draw();requestAnimationFrame(gameLoop);}gameLoop();</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Fortnite with Mobile and Keyboard Controls</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background: #87CEEB;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        .controls button {
+            width: 60px;
+            height: 60px;
+            font-size: 20px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="controls">
+        <button id="left">⬅️</button>
+        <button id="up">⬆️</button>
+        <button id="right">➡️</button>
+        <button id="down">⬇️</button>
+        <button id="shoot">🔫</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Set canvas size dynamically based on window size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas(); // Initial resize
+
+        // Scale factor for game elements based on canvas size
+        const scaleFactor = canvas.width / 800;
+
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            width: 30 * scaleFactor,
+            height: 30 * scaleFactor,
+            color: "blue",
+            speed: 5 * scaleFactor,
+            health: 100,
+            ammo: 30,
+            weapon: null
+        };
+
+        const weapons = [
+            { x: 300 * scaleFactor, y: 200 * scaleFactor, width: 20 * scaleFactor, height: 20 * scaleFactor, color: "gold", type: "pistol" },
+            { x: 500 * scaleFactor, y: 400 * scaleFactor, width: 20 * scaleFactor, height: 20 * scaleFactor, color: "silver", type: "rifle" }
+        ];
+
+        const bullets = [];
+        const enemies = [
+            { x: 600 * scaleFactor, y: 200 * scaleFactor, width: 30 * scaleFactor, height: 30 * scaleFactor, color: "red", speed: 1 * scaleFactor, damage: 10 },
+            { x: 200 * scaleFactor, y: 300 * scaleFactor, width: 30 * scaleFactor, height: 30 * scaleFactor, color: "red", speed: 1 * scaleFactor, damage: 10 }
+        ];
+
+        const ammoItems = [
+            { x: 100 * scaleFactor, y: 100 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green" },
+            { x: 700 * scaleFactor, y: 500 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green" }
+        ];
+
+        let keys = {};
+        let mobileControls = {
+            left: false,
+            up: false,
+            right: false,
+            down: false,
+            shoot: false
+        };
+
+        let goldPumpUnlocked = false;
+        const goldPumpImage = new Image();
+        goldPumpImage.src = "gold_pump.png";
+
+        window.addEventListener("keydown", (e) => {
+            keys[e.key] = true;
+        });
+
+        window.addEventListener("keyup", (e) => {
+            keys[e.key] = false;
+            if (e.key === " " && player.weapon) {
+                shootBullet();
+            }
+        });
+
+        // Mobile controls
+        document.getElementById("left").addEventListener("mousedown", () => mobileControls.left = true);
+        document.getElementById("left").addEventListener("mouseup", () => mobileControls.left = false);
+
+        document.getElementById("up").addEventListener("mousedown", () => mobileControls.up = true);
+        document.getElementById("up").addEventListener("mouseup", () => mobileControls.up = false);
+
+        document.getElementById("right").addEventListener("mousedown", () => mobileControls.right = true);
+        document.getElementById("right").addEventListener("mouseup", () => mobileControls.right = false);
+
+        document.getElementById("down").addEventListener("mousedown", () => mobileControls.down = true);
+        document.getElementById("down").addEventListener("mouseup", () => mobileControls.down = false);
+
+        document.getElementById("shoot").addEventListener("mousedown", () => mobileControls.shoot = true);
+        document.getElementById("shoot").addEventListener("mouseup", () => mobileControls.shoot = false);
+
+        function shootBullet() {
+            if (player.weapon && player.ammo > 0) {
+                bullets.push({ x: player.x + player.width / 2 - 5, y: player.y, width: 5 * scaleFactor, height: 5 * scaleFactor, color: "yellow", speed: 10 * scaleFactor });
+                player.ammo--;
+            }
+        }
+
+        function update() {
+            // Player movement
+            if (keys["ArrowUp"] || mobileControls.up) player.y -= player.speed;
+            if (keys["ArrowDown"] || mobileControls.down) player.y += player.speed;
+            if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
+            if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
+
+            // Shooting
+            if (mobileControls.shoot) {
+                shootBullet();
+                mobileControls.shoot = false;
+            }
+
+            // Check for weapon pickup
+            weapons.forEach((weapon, index) => {
+                if (player.x < weapon.x + weapon.width &&
+                    player.x + player.width > weapon.x &&
+                    player.y < weapon.y + weapon.height &&
+                    player.y + player.height > weapon.y) {
+                    player.weapon = weapon.type;
+                    weapons.splice(index, 1);
+                }
+            });
+
+            // Check for ammo pickup
+            ammoItems.forEach((ammo, index) => {
+                if (player.x < ammo.x + ammo.width &&
+                    player.x + player.width > ammo.x &&
+                    player.y < ammo.y + ammo.height &&
+                    player.y + player.height > ammo.y) {
+                    player.ammo += 10;
+                    ammoItems.splice(index, 1);
+                }
+            });
+
+            // Update bullets
+            bullets.forEach((bullet, index) => {
+                bullet.y -= bullet.speed;
+                if (bullet.y < 0) bullets.splice(index, 1);
+            });
+
+            // Bullet-enemy collisions
+            bullets.forEach((bullet, bIndex) => {
+                enemies.forEach((enemy, eIndex) => {
+                    if (bullet.x < enemy.x + enemy.width &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + bullet.height > enemy.y) {
+                        bullets.splice(bIndex, 1);
+                        enemies.splice(eIndex, 1);
+                        setTimeout(() => {
+                            enemies.push({ x: Math.random() * (canvas.width - 30), y: Math.random() * (canvas.height - 30), width: 30 * scaleFactor, height: 30 * scaleFactor, color: "red", speed: 1 * scaleFactor, damage: 10 });
+                        }, 3000);
+                    }
+                });
+            });
+
+            // Enemy movement and collisions with player
+            enemies.forEach((enemy) => {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > 0) {
+                    enemy.x += (dx / distance) * enemy.speed;
+                    enemy.y += (dy / distance) * enemy.speed;
+                }
+
+                if (player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y) {
+                    player.health -= enemy.damage;
+                    if (player.health <= 0) {
+                        alert("Game Over!");
+                        window.location.reload();
+                    }
+                }
+            });
+
+            if (enemies.length >= 5 && !goldPumpUnlocked) {
+                goldPumpUnlocked = true;
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw player
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // Draw weapons
+            weapons.forEach((weapon) => {
+                ctx.fillStyle = weapon.color;
+                ctx.fillRect(weapon.x, weapon.y, weapon.width, weapon.height);
+            });
+
+            // Draw ammo items
+            ammoItems.forEach((ammo) => {
+                ctx.fillStyle = ammo.color;
+                ctx.fillRect(ammo.x, ammo.y, ammo.width, ammo.height);
+            });
+
+            // Draw bullets
+            bullets.forEach((bullet) => {
+                ctx.fillStyle = bullet.color;
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+
+            // Draw enemies
+            enemies.forEach((enemy) => {
+                ctx.fillStyle = enemy.color;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+
+            // Draw health bar
+            ctx.fillStyle = "green";
+            ctx.fillRect(10, 10, player.health * 2, 20);
+            ctx.strokeStyle = "black";
+            ctx.strokeRect(10, 10, 200, 20);
+
+            // Draw ammo
+            ctx.fillStyle = "black";
+            ctx.font = "20px Arial";
+            ctx.fillText(`Ammo: ${player.ammo}`, canvas.width - 120, 30);
+
+            // Draw weapon name
+            if (player.weapon) {
+                ctx.fillStyle = "black";
+                ctx.fillText(`Weapon: ${player.weapon}`, 10, 50);
+            }
+
+            // Draw gold pump
+            if (goldPumpUnlocked) {
+                ctx.drawImage(goldPumpImage, canvas.width - 100, 50, 40, 40);
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
