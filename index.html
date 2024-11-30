@@ -115,20 +115,32 @@
         });
 
         // Mobile controls
-        document.getElementById("left").addEventListener("mousedown", () => mobileControls.left = true);
-        document.getElementById("left").addEventListener("mouseup", () => mobileControls.left = false);
+        function handleMobileControl(event, isPressed) {
+            event.preventDefault();
+            if (event.target.id === "left") mobileControls.left = isPressed;
+            if (event.target.id === "up") mobileControls.up = isPressed;
+            if (event.target.id === "right") mobileControls.right = isPressed;
+            if (event.target.id === "down") mobileControls.down = isPressed;
+            if (event.target.id === "shoot") mobileControls.shoot = isPressed;
+        }
 
-        document.getElementById("up").addEventListener("mousedown", () => mobileControls.up = true);
-        document.getElementById("up").addEventListener("mouseup", () => mobileControls.up = false);
+        // For both mouse and touch events (to handle mobile interaction)
+        ["mousedown", "touchstart"].forEach((event) => {
+            document.getElementById("left").addEventListener(event, (e) => handleMobileControl(e, true));
+            document.getElementById("up").addEventListener(event, (e) => handleMobileControl(e, true));
+            document.getElementById("right").addEventListener(event, (e) => handleMobileControl(e, true));
+            document.getElementById("down").addEventListener(event, (e) => handleMobileControl(e, true));
+            document.getElementById("shoot").addEventListener(event, (e) => handleMobileControl(e, true));
+        });
 
-        document.getElementById("right").addEventListener("mousedown", () => mobileControls.right = true);
-        document.getElementById("right").addEventListener("mouseup", () => mobileControls.right = false);
-
-        document.getElementById("down").addEventListener("mousedown", () => mobileControls.down = true);
-        document.getElementById("down").addEventListener("mouseup", () => mobileControls.down = false);
-
-        document.getElementById("shoot").addEventListener("mousedown", () => mobileControls.shoot = true);
-        document.getElementById("shoot").addEventListener("mouseup", () => mobileControls.shoot = false);
+        // Reset controls when mouse/touch is released
+        ["mouseup", "touchend"].forEach((event) => {
+            document.getElementById("left").addEventListener(event, (e) => handleMobileControl(e, false));
+            document.getElementById("up").addEventListener(event, (e) => handleMobileControl(e, false));
+            document.getElementById("right").addEventListener(event, (e) => handleMobileControl(e, false));
+            document.getElementById("down").addEventListener(event, (e) => handleMobileControl(e, false));
+            document.getElementById("shoot").addEventListener(event, (e) => handleMobileControl(e, false));
+        });
 
         function shootBullet() {
             if (player.weapon && player.ammo > 0) {
