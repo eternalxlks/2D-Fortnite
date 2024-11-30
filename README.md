@@ -4,5 +4,6 @@ Pretty Much 2D Fortnite
 Player: Move with arrow keys (Left and Right).
 Shooting: Press Space to shoot bullets.
 Enemies: Random enemies fall and you shoot
+Weapong Pickup: Move over them
 # Updates
 I update this once every month
