@@ -96,6 +96,8 @@
             shoot: false
         };
 
+        let bullets = []; // Initialize the bullets array
+
         window.addEventListener("keydown", (e) => {
             keys[e.key] = true;
         });
@@ -279,6 +281,12 @@
             if (defeatedEnemies >= 100) {
                 ctx.fillText("You Win!", canvas.width / 2 - 50, canvas.height / 2);
             }
+
+            // Draw bullets
+            bullets.forEach((bullet) => {
+                ctx.fillStyle = bullet.color;
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
         }
 
         // Main game loop
