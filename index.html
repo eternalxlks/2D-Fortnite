@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Survival Game</title>
+    <title>2D Fortnite</title>
     <style>
         body {
             margin: 0;
@@ -11,7 +11,7 @@
         }
         canvas {
             display: block;
-            background: #87CEEB; /* Sky blue */
+            background: #87CEEB;
         }
     </style>
 </head>
@@ -20,81 +20,90 @@
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        
-        // Resize canvas
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
 
-        // Player properties
+        // Canvas setup
+        canvas.width = 800;
+        canvas.height = 600;
+
+        // Player object
         const player = {
-            x: canvas.width / 2,
-            y: canvas.height - 50,
+            x: 100,
+            y: 100,
             width: 30,
             height: 30,
-            color: "green",
-            speed: 5
+            color: "blue",
+            speed: 5,
+            weapon: null, // Current weapon
         };
 
-        // Bullet properties
+        // Weapons on the ground
+        const weapons = [
+            { x: 300, y: 200, width: 20, height: 20, color: "gold", type: "pistol" },
+            { x: 500, y: 400, width: 20, height: 20, color: "silver", type: "rifle" },
+        ];
+
+        // Bullets
         const bullets = [];
-        const bulletSpeed = 7;
 
-        // Enemy properties
-        const enemies = [];
-        const enemySpeed = 2;
+        // Enemies
+        const enemies = [
+            { x: 600, y: 200, width: 30, height: 30, color: "red" },
+            { x: 200, y: 300, width: 30, height: 30, color: "red" },
+        ];
 
-        // Key states
+        // Controls
         const keys = {};
 
-        // Event listeners for movement
+        // Event listeners
         window.addEventListener("keydown", (e) => {
             keys[e.key] = true;
         });
         window.addEventListener("keyup", (e) => {
             keys[e.key] = false;
-        });
 
-        // Create enemies periodically
-        setInterval(() => {
-            const size = Math.random() * 30 + 20;
-            enemies.push({
-                x: Math.random() * (canvas.width - size),
-                y: 0,
-                width: size,
-                height: size,
-                color: "red"
-            });
-        }, 1000);
+            // Handle shooting
+            if (e.key === " ") {
+                if (player.weapon) {
+                    bullets.push({
+                        x: player.x + player.width / 2 - 5,
+                        y: player.y,
+                        width: 5,
+                        height: 5,
+                        color: "yellow",
+                        speed: 10,
+                    });
+                }
+            }
+        });
 
         // Update game state
         function update() {
-            // Move player
-            if (keys["ArrowLeft"] && player.x > 0) player.x -= player.speed;
-            if (keys["ArrowRight"] && player.x + player.width < canvas.width) player.x += player.speed;
-            if (keys[" "]) {
-                // Shoot bullet
-                bullets.push({
-                    x: player.x + player.width / 2 - 5,
-                    y: player.y,
-                    width: 5,
-                    height: 10,
-                    color: "yellow"
-                });
-            }
+            // Player movement
+            if (keys["ArrowUp"]) player.y -= player.speed;
+            if (keys["ArrowDown"]) player.y += player.speed;
+            if (keys["ArrowLeft"]) player.x -= player.speed;
+            if (keys["ArrowRight"]) player.x += player.speed;
+
+            // Weapon pickup
+            weapons.forEach((weapon, index) => {
+                if (
+                    player.x < weapon.x + weapon.width &&
+                    player.x + player.width > weapon.x &&
+                    player.y < weapon.y + weapon.height &&
+                    player.y + player.height > weapon.y
+                ) {
+                    player.weapon = weapon.type; // Equip weapon
+                    weapons.splice(index, 1); // Remove weapon from the ground
+                }
+            });
 
             // Move bullets
             bullets.forEach((bullet, index) => {
-                bullet.y -= bulletSpeed;
-                if (bullet.y + bullet.height < 0) bullets.splice(index, 1); // Remove off-screen bullets
+                bullet.y -= bullet.speed;
+                if (bullet.y < 0) bullets.splice(index, 1); // Remove off-screen bullets
             });
 
-            // Move enemies
-            enemies.forEach((enemy, index) => {
-                enemy.y += enemySpeed;
-                if (enemy.y > canvas.height) enemies.splice(index, 1); // Remove off-screen enemies
-            });
-
-            // Check for collisions
+            // Check bullet-enemy collisions
             bullets.forEach((bullet, bIndex) => {
                 enemies.forEach((enemy, eIndex) => {
                     if (
@@ -103,15 +112,14 @@
                         bullet.y < enemy.y + enemy.height &&
                         bullet.y + bullet.height > enemy.y
                     ) {
-                        // Remove bullet and enemy on collision
-                        bullets.splice(bIndex, 1);
-                        enemies.splice(eIndex, 1);
+                        bullets.splice(bIndex, 1); // Remove bullet
+                        enemies.splice(eIndex, 1); // Remove enemy
                     }
                 });
             });
         }
 
-        // Draw game state
+        // Draw game objects
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -119,17 +127,29 @@
             ctx.fillStyle = player.color;
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
+            // Draw weapons
+            weapons.forEach((weapon) => {
+                ctx.fillStyle = weapon.color;
+                ctx.fillRect(weapon.x, weapon.y, weapon.width, weapon.height);
+            });
+
             // Draw bullets
-            bullets.forEach(bullet => {
+            bullets.forEach((bullet) => {
                 ctx.fillStyle = bullet.color;
                 ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             });
 
             // Draw enemies
-            enemies.forEach(enemy => {
+            enemies.forEach((enemy) => {
                 ctx.fillStyle = enemy.color;
                 ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
             });
+
+            // Draw current weapon
+            if (player.weapon) {
+                ctx.fillStyle = "black";
+                ctx.fillText(`Weapon: ${player.weapon}`, 10, 20);
+            }
         }
 
         // Game loop
@@ -139,7 +159,7 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Start the game
+        // Start game
         gameLoop();
     </script>
 </body>
