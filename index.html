@@ -35,34 +35,34 @@
             cursor: pointer;
         }
 
-        .health-bar {
+        #health-bar {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: 10px;
+            left: 10px;
             width: 200px;
-            height: 20px;
-            border: 2px solid black;
-            background-color: #ccc;
+            height: 30px;
+            background: red;
         }
 
-        .health-fill {
+        #health-fill {
+            width: 100%;
             height: 100%;
-            background-color: red;
+            background: green;
         }
 
-        .ammo-bar {
+        #ammo-bar {
             position: fixed;
             top: 50px;
-            left: 20px;
+            left: 10px;
             width: 200px;
             height: 20px;
-            border: 2px solid black;
-            background-color: #ccc;
+            background: yellow;
         }
 
-        .ammo-fill {
+        #ammo-fill {
+            width: 100%;
             height: 100%;
-            background-color: yellow;
+            background: orange;
         }
     </style>
 </head>
@@ -76,12 +76,8 @@
         <button id="shoot">🔫</button>
     </div>
 
-    <div class="health-bar">
-        <div id="health-fill" class="health-fill"></div>
-    </div>
-    <div class="ammo-bar">
-        <div id="ammo-fill" class="ammo-fill"></div>
-    </div>
+    <div id="health-bar"><div id="health-fill"></div></div>
+    <div id="ammo-bar"><div id="ammo-fill"></div></div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
@@ -108,22 +104,22 @@
             speed: 5 * scaleFactor,
             health: 100,
             ammo: 30,
-            weapon: null, // The weapon currently in use
+            weapon: null,
             inventory: [] // 2 inventory slots
         };
 
         const weapons = [
-            { x: 300 * scaleFactor, y: 200 * scaleFactor, width: 20 * scaleFactor, height: 20 * scaleFactor, color: "gold", type: "pistol", rarity: "common", ammo: 30 },
-            { x: 500 * scaleFactor, y: 400 * scaleFactor, width: 20 * scaleFactor, height: 20 * scaleFactor, color: "silver", type: "rifle", rarity: "legendary", ammo: 100 }
+            { x: 300 * scaleFactor, y: 200 * scaleFactor, width: 20 * scaleFactor, height: 20 * scaleFactor, color: "gold", type: "pistol", damage: 10, fireRate: 500 },
+            { x: 500 * scaleFactor, y: 400 * scaleFactor, width: 20 * scaleFactor, height: 20 * scaleFactor, color: "silver", type: "rifle", damage: 30, fireRate: 200 }
         ];
 
         const ammoItems = [
-            { x: 100 * scaleFactor, y: 100 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "yellow" },
-            { x: 700 * scaleFactor, y: 500 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "yellow" }
+            { x: 100 * scaleFactor, y: 100 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green" },
+            { x: 700 * scaleFactor, y: 500 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green" }
         ];
 
         const enemies = [];
-        let defeatedEnemies = 0; // Track number of defeated enemies
+        let defeatedEnemies = 0;
         let keys = {};
         let mobileControls = {
             left: false,
@@ -133,7 +129,8 @@
             shoot: false
         };
 
-        let bullets = []; // Initialize the bullets array
+        let lastShotTime = 0;
+        let bullets = [];
 
         window.addEventListener("keydown", (e) => {
             keys[e.key] = true;
@@ -156,7 +153,7 @@
             if (event.target.id === "shoot") mobileControls.shoot = isPressed;
         }
 
-        // For both mouse and touch events (to handle mobile interaction)
+        // For both mouse and touch events
         ["mousedown", "touchstart"].forEach((event) => {
             document.getElementById("left").addEventListener(event, (e) => handleMobileControl(e, true));
             document.getElementById("up").addEventListener(event, (e) => handleMobileControl(e, true));
@@ -165,7 +162,6 @@
             document.getElementById("shoot").addEventListener(event, (e) => handleMobileControl(e, true));
         });
 
-        // Reset controls when mouse/touch is released
         ["mouseup", "touchend"].forEach((event) => {
             document.getElementById("left").addEventListener(event, (e) => handleMobileControl(e, false));
             document.getElementById("up").addEventListener(event, (e) => handleMobileControl(e, false));
@@ -176,29 +172,28 @@
 
         // Function to shoot bullet
         function shootBullet() {
-            if (player.weapon && player.ammo > 0) {
-                bullets.push({ x: player.x + player.width / 2 - 5, y: player.y, width: 5 * scaleFactor, height: 5 * scaleFactor, color: "yellow", speed: 10 * scaleFactor });
+            if (player.weapon && player.ammo > 0 && Date.now() - lastShotTime > player.weapon.fireRate) {
+                bullets.push({
+                    x: player.x + player.width / 2 - 5,
+                    y: player.y,
+                    width: 5 * scaleFactor,
+                    height: 5 * scaleFactor,
+                    color: "yellow",
+                    speed: 10 * scaleFactor,
+                    damage: player.weapon.damage
+                });
                 player.ammo--;
+                lastShotTime = Date.now();
             }
-        }
-
-        // Spawn an enemy at a random position
-        function spawnEnemy() {
-            const enemySize = 30 * scaleFactor;
-            const enemy = {
-                x: Math.random() * (canvas.width - enemySize),
-                y: Math.random() * (canvas.height - enemySize),
-                width: enemySize,
-                height: enemySize,
-                color: "red",
-                speed: 2 * scaleFactor,
-                health: 50
-            };
-            enemies.push(enemy);
         }
 
         // Update function for the game loop
         function update() {
+            // Check if the player's health has dropped to zero
+            if (player.health <= 0) {
+                resetGame(); // Reset game if health is zero
+            }
+
             // Player movement
             if (keys["ArrowUp"] || mobileControls.up) player.y -= player.speed;
             if (keys["ArrowDown"] || mobileControls.down) player.y += player.speed;
@@ -213,6 +208,7 @@
                     player.y + player.height > weapon.y) {
                     if (player.inventory.length < 2) {
                         player.inventory.push(weapon);
+                        player.weapon = weapon;
                         weapons.splice(index, 1); // Remove weapon after pickup
                     }
                 }
@@ -231,34 +227,63 @@
 
             // Move bullets
             bullets.forEach((bullet, index) => {
-                bullet.y -= bullet.speed; // Move upwards
-                if (bullet.y < 0) bullets.splice(index, 1); // Remove bullet if it goes off-screen
+                bullet.y -= bullet.speed;
+                if (bullet.y < 0) bullets.splice(index, 1);
             });
 
             // Spawn enemies at intervals
             if (Math.random() < 0.01) spawnEnemy();
 
-            // Move enemies
+            // Move enemies and check for collisions
             enemies.forEach((enemy) => {
-                // Enemies move randomly
-                enemy.x += (Math.random() - 0.5) * enemy.speed;
-                enemy.y += (Math.random() - 0.5) * enemy.speed;
-
-                // Check for collision with player
-                if (player.x < enemy.x + enemy.width &&
-                    player.x + player.width > enemy.x &&
-                    player.y < enemy.y + enemy.height &&
-                    player.y + player.height > enemy.y) {
-                    player.health -= 5; // Player takes damage when touching an enemy
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > 0) {
+                    enemy.x += (dx / distance) * enemy.speed;
+                    enemy.y += (dy / distance) * enemy.speed;
                 }
             });
 
-            // Update health and ammo bars
-            document.getElementById("health-fill").style.width = player.health + "%";
-            document.getElementById("ammo-fill").style.width = (player.ammo / 100) * 100 + "%"; // Update ammo bar
+            // Bullet-enemy collisions
+            bullets.forEach((bullet, bIndex) => {
+                enemies.forEach((enemy, eIndex) => {
+                    if (bullet.x < enemy.x + enemy.width &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + bullet.height > enemy.y) {
+                        bullets.splice(bIndex, 1);
+                        enemies.splice(eIndex, 1);
+                        defeatedEnemies++;
+                    }
+                });
+            });
         }
 
-        // Draw game elements (including health and ammo bars)
+        // Spawn an enemy
+        function spawnEnemy() {
+            enemies.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                width: 30 * scaleFactor,
+                height: 30 * scaleFactor,
+                color: "red",
+                speed: 1 * scaleFactor,
+                health: 20
+            });
+        }
+
+        // Reset game after death
+        function resetGame() {
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.health = 100;
+            defeatedEnemies = 0;
+            enemies.length = 0;
+            bullets.length = 0;
+        }
+
+        // Draw all game elements
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -272,16 +297,16 @@
                 ctx.fillRect(weapon.x, weapon.y, weapon.width, weapon.height);
             });
 
-            // Draw ammo items
-            ammoItems.forEach((ammo) => {
-                ctx.fillStyle = ammo.color;
-                ctx.fillRect(ammo.x, ammo.y, ammo.width, ammo.height);
-            });
-
             // Draw enemies
             enemies.forEach((enemy) => {
                 ctx.fillStyle = enemy.color;
                 ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+
+            // Draw ammo items
+            ammoItems.forEach((ammo) => {
+                ctx.fillStyle = ammo.color;
+                ctx.fillRect(ammo.x, ammo.y, ammo.width, ammo.height);
             });
 
             // Draw defeated enemies count
@@ -289,11 +314,18 @@
             ctx.font = "20px Arial";
             ctx.fillText("Enemies Defeated: " + defeatedEnemies, 10, 30);
 
-            // Draw bullets
-            bullets.forEach((bullet) => {
-                ctx.fillStyle = bullet.color;
-                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
-            });
+            // Draw health bar
+            const healthFill = document.getElementById("health-fill");
+            healthFill.style.width = (player.health / 100) * 100 + "%";
+
+            // Draw ammo bar
+            const ammoFill = document.getElementById("ammo-fill");
+            ammoFill.style.width = (player.ammo / 30) * 100 + "%";
+
+            // If 100 enemies defeated, display win message
+            if (defeatedEnemies >= 100) {
+                ctx.fillText("You Win!", canvas.width / 2 - 50, canvas.height / 2);
+            }
         }
 
         // Main game loop
