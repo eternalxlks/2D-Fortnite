@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Fortnite with Mobile and Keyboard Controls</title>
+    <title>2D Fortnite with Ammo and Gold Pump</title>
     <style>
         body {
             margin: 0;
@@ -38,6 +38,7 @@
     <div class="controls">
         <button id="left">⬅️</button>
         <button id="up">⬆️</button>
+        <button id="down">⬇️</button>
         <button id="right">➡️</button>
         <button id="shoot">🔫</button>
     </div>
@@ -58,17 +59,24 @@
             color: "blue",
             speed: 5,
             health: 100,
-            weapon: null, // Current weapon
+            weapon: null,
+            ammo: 0,
         };
 
-        // Weapons on the ground
-        const weapons = [
-            { x: 300, y: 200, width: 20, height: 20, color: "gold", type: "pistol" },
-            { x: 500, y: 400, width: 20, height: 20, color: "silver", type: "rifle" },
+        // Ammo boxes
+        const ammoBoxes = [
+            { x: 200, y: 150, width: 20, height: 20, color: "green" },
+            { x: 600, y: 400, width: 20, height: 20, color: "green" },
         ];
 
-        // Bullets
+        // Gold Pump setup
+        let goldPumpUnlocked = false;
+        const goldPumpImage = new Image();
+        goldPumpImage.src = "gold_pump.png"; // Replace with your image path
+
+        // Weapons and bullets
         const bullets = [];
+        let enemiesDefeated = 0;
 
         // Enemies
         const enemies = [
@@ -78,7 +86,7 @@
 
         // Controls
         const keys = {};
-        const mobileControls = { left: false, up: false, right: false, shoot: false };
+        const mobileControls = { left: false, up: false, down: false, right: false, shoot: false };
 
         // Event listeners for keyboard
         window.addEventListener("keydown", (e) => {
@@ -86,7 +94,7 @@
         });
         window.addEventListener("keyup", (e) => {
             keys[e.key] = false;
-            if (e.key === " " && player.weapon) {
+            if (e.key === " " && player.ammo > 0) {
                 shootBullet();
             }
         });
@@ -96,20 +104,26 @@
         document.getElementById("left").addEventListener("mouseup", () => mobileControls.left = false);
         document.getElementById("up").addEventListener("mousedown", () => mobileControls.up = true);
         document.getElementById("up").addEventListener("mouseup", () => mobileControls.up = false);
+        document.getElementById("down").addEventListener("mousedown", () => mobileControls.down = true);
+        document.getElementById("down").addEventListener("mouseup", () => mobileControls.down = false);
         document.getElementById("right").addEventListener("mousedown", () => mobileControls.right = true);
         document.getElementById("right").addEventListener("mouseup", () => mobileControls.right = false);
-        document.getElementById("shoot").addEventListener("mousedown", () => mobileControls.shoot = true);
+        document.getElementById("shoot").addEventListener("mousedown", () => {
+            mobileControls.shoot = true;
+            if (player.ammo > 0) shootBullet();
+        });
         document.getElementById("shoot").addEventListener("mouseup", () => mobileControls.shoot = false);
 
         // Helper function for shooting bullets
         function shootBullet() {
-            if (player.weapon) {
+            if (player.ammo > 0) {
+                player.ammo--; // Decrease ammo
                 bullets.push({
                     x: player.x + player.width / 2 - 5,
                     y: player.y,
                     width: 5,
                     height: 5,
-                    color: "yellow",
+                    color: goldPumpUnlocked ? "orange" : "yellow",
                     speed: 10,
                 });
             }
@@ -119,26 +133,20 @@
         function update() {
             // Player movement
             if (keys["ArrowUp"] || mobileControls.up) player.y -= player.speed;
-            if (keys["ArrowDown"]) player.y += player.speed;
+            if (keys["ArrowDown"] || mobileControls.down) player.y += player.speed;
             if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
             if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
 
-            // Shoot bullets on mobile
-            if (mobileControls.shoot) {
-                shootBullet();
-                mobileControls.shoot = false; // Prevent continuous shooting
-            }
-
-            // Weapon pickup
-            weapons.forEach((weapon, index) => {
+            // Ammo collection
+            ammoBoxes.forEach((box, index) => {
                 if (
-                    player.x < weapon.x + weapon.width &&
-                    player.x + player.width > weapon.x &&
-                    player.y < weapon.y + weapon.height &&
-                    player.y + player.height > weapon.y
+                    player.x < box.x + box.width &&
+                    player.x + player.width > box.x &&
+                    player.y < box.y + box.height &&
+                    player.y + player.height > box.y
                 ) {
-                    player.weapon = weapon.type; // Equip weapon
-                    weapons.splice(index, 1); // Remove weapon from the ground
+                    player.ammo += 10; // Add ammo
+                    ammoBoxes.splice(index, 1); // Remove the box
                 }
             });
 
@@ -159,6 +167,10 @@
                     ) {
                         bullets.splice(bIndex, 1); // Remove bullet
                         enemies.splice(eIndex, 1); // Remove enemy
+                        enemiesDefeated++;
+
+                        // Unlock gold pump after 5 enemies
+                        if (enemiesDefeated >= 5) goldPumpUnlocked = true;
 
                         // Respawn enemy after 3 seconds
                         setTimeout(() => {
@@ -194,7 +206,7 @@
                     player.y < enemy.y + enemy.height &&
                     player.y + player.height > enemy.y
                 ) {
-                    player.health -= enemy.damage; // Reduce player health
+                    player.health -= enemy.damage;
                     if (player.health <= 0) {
                         alert("Game Over!");
                         window.location.reload(); // Restart game
@@ -211,10 +223,10 @@
             ctx.fillStyle = player.color;
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
-            // Draw weapons
-            weapons.forEach((weapon) => {
-                ctx.fillStyle = weapon.color;
-                ctx.fillRect(weapon.x, weapon.y, weapon.width, weapon.height);
+            // Draw ammo boxes
+            ammoBoxes.forEach((box) => {
+                ctx.fillStyle = box.color;
+                ctx.fillRect(box.x, box.y, box.width, box.height);
             });
 
             // Draw bullets
@@ -231,14 +243,24 @@
 
             // Draw health bar
             ctx.fillStyle = "green";
+            ctx.fillRect(10, 10, player.health
+            // Draw health bar
+            ctx.fillStyle = "green";
             ctx.fillRect(10, 10, player.health * 2, 20); // Scale health to fit the bar
             ctx.strokeStyle = "black";
             ctx.strokeRect(10, 10, 200, 20); // Draw health bar outline
 
+            // Draw ammo count
+            ctx.fillStyle = "black";
+            ctx.font = "16px Arial";
+            ctx.fillText(`Ammo: ${player.ammo}`, 10, 50);
+
             // Draw current weapon
-            if (player.weapon) {
-                ctx.fillStyle = "black";
-                ctx.fillText(`Weapon: ${player.weapon}`, 10, 50);
+            if (goldPumpUnlocked) {
+                ctx.drawImage(goldPumpImage, player.x - 40, player.y - 40, 30, 30);
+                ctx.fillText("Weapon: Gold Pump", 10, 80);
+            } else if (player.weapon) {
+                ctx.fillText(`Weapon: ${player.weapon}`, 10, 80);
             }
         }
 
