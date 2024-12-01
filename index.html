@@ -12,7 +12,7 @@
 
         canvas {
             display: block;
-            background: linear-gradient(to bottom, #87CEEB, #B0E0E6); /* Gradient sky background */
+            background: linear-gradient(to bottom, #87CEEB, #B0E0E6);
         }
 
         .controls {
@@ -77,28 +77,24 @@
         <button id="down">⬇️</button>
         <button id="shoot">🔫</button>
     </div>
-
     <div id="health-bar">
         <div id="health-fill"></div>
     </div>
-
     <div id="ammo-bar">
         <div id="ammo-fill"></div>
     </div>
-
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Adjust canvas size to the window
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
+
         window.addEventListener("resize", resizeCanvas);
         resizeCanvas();
 
-        // Game elements
         const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
@@ -106,85 +102,107 @@
             height: 40,
             speed: 5,
             health: 100,
-            ammo: 30
+            ammo: 30,
+            weapon: null,
         };
-
-        const bullets = [];
-        let shootCooldown = 0;
 
         const keys = {};
-        const mobileControls = {
-            left: false,
-            up: false,
-            right: false,
-            down: false,
-            shoot: false
-        };
+        const mobileControls = { left: false, up: false, right: false, down: false, shoot: false };
+        const bullets = [];
+        const enemies = [];
+        const enemySpawnInterval = 2000; // 2 seconds
+        let lastEnemySpawn = Date.now();
 
-        window.addEventListener("keydown", (e) => keys[e.key] = true);
-        window.addEventListener("keyup", (e) => keys[e.key] = false);
+        const playerImage = new Image();
+        playerImage.src = "https://art.pixilart.com/thumb/904262a87345e73.png";
 
-        document.getElementById("left").addEventListener("mousedown", () => mobileControls.left = true);
-        document.getElementById("left").addEventListener("mouseup", () => mobileControls.left = false);
-        document.getElementById("up").addEventListener("mousedown", () => mobileControls.up = true);
-        document.getElementById("up").addEventListener("mouseup", () => mobileControls.up = false);
-        document.getElementById("right").addEventListener("mousedown", () => mobileControls.right = true);
-        document.getElementById("right").addEventListener("mouseup", () => mobileControls.right = false);
-        document.getElementById("down").addEventListener("mousedown", () => mobileControls.down = true);
-        document.getElementById("down").addEventListener("mouseup", () => mobileControls.down = false);
-        document.getElementById("shoot").addEventListener("mousedown", () => mobileControls.shoot = true);
-        document.getElementById("shoot").addEventListener("mouseup", () => mobileControls.shoot = false);
+        const enemyImage = new Image();
+        enemyImage.src = "data:image/png;base64,...";
+
+        window.addEventListener("keydown", (e) => (keys[e.key] = true));
+        window.addEventListener("keyup", (e) => {
+            keys[e.key] = false;
+            if (e.key === " ") shoot();
+        });
+
+        document.querySelectorAll(".controls button").forEach((button) => {
+            button.addEventListener("mousedown", () => handleControl(button.id, true));
+            button.addEventListener("mouseup", () => handleControl(button.id, false));
+        });
+
+        function handleControl(control, state) {
+            mobileControls[control] = state;
+            if (control === "shoot" && state) shoot();
+        }
+
+        function shoot() {
+            if (player.ammo > 0) {
+                bullets.push({ x: player.x + player.width / 2 - 5, y: player.y, width: 5, height: 10, speed: -10 });
+                player.ammo--;
+            }
+        }
+
+        function spawnEnemy() {
+            enemies.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                width: 30,
+                height: 30,
+                health: 100,
+            });
+        }
 
         function update() {
-            // Movement
             if (keys["ArrowUp"] || mobileControls.up) player.y -= player.speed;
             if (keys["ArrowDown"] || mobileControls.down) player.y += player.speed;
             if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
             if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
 
-            // Boundary checks
             player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
             player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
 
-            // Shooting
-            if (shootCooldown > 0) shootCooldown--;
-            if ((keys[" "] || mobileControls.shoot) && shootCooldown === 0 && player.ammo > 0) {
-                bullets.push({
-                    x: player.x + player.width / 2 - 2.5,
-                    y: player.y,
-                    width: 5,
-                    height: 10,
-                    speed: 7
-                });
-                player.ammo--;
-                shootCooldown = 10; // Cooldown duration
-            }
-
-            // Bullet movement
             bullets.forEach((bullet, index) => {
-                bullet.y -= bullet.speed;
-                if (bullet.y + bullet.height < 0) bullets.splice(index, 1); // Remove bullets off-screen
+                bullet.y += bullet.speed;
+                if (bullet.y < 0) bullets.splice(index, 1);
             });
 
-            // Update health and ammo bars
-            document.getElementById("health-fill").style.width = `${player.health}%`;
-            document.getElementById("ammo-fill").style.width = `${(player.ammo / 30) * 100}%`;
+            enemies.forEach((enemy, index) => {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
 
-            // Render everything
+                enemy.x += (dx / dist) * 2;
+                enemy.y += (dy / dist) * 2;
+
+                if (dist < 30) {
+                    player.health -= 1;
+                }
+            });
+
+            if (Date.now() - lastEnemySpawn > enemySpawnInterval) {
+                spawnEnemy();
+                lastEnemySpawn = Date.now();
+            }
+
             draw();
             requestAnimationFrame(update);
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
 
-            // Draw player
-            ctx.fillStyle = "blue";
-            ctx.fillRect(player.x, player.y, player.width, player.height);
+            bullets.forEach((bullet) => {
+                ctx.fillStyle = "yellow";
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
 
-            // Draw bullets
-            ctx.fillStyle = "yellow";
-            bullets.forEach(bullet => ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height));
+            enemies.forEach((enemy) => {
+                ctx.drawImage(enemyImage, enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+
+            document.getElementById("health-fill").style.width = `${player.health}%`;
+            document.getElementById("ammo-fill").style.width = `${(player.ammo / 30) * 100}%`;
         }
 
         update();
