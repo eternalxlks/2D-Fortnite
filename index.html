@@ -35,40 +35,35 @@
             cursor: pointer;
         }
 
-        @media (max-width: 600px) {
-            .controls button {
-                width: 40px;
-                height: 40px;
-            }
-        }
-
-        #health-bar {
+        #health-bar, #ammo-bar {
             position: fixed;
-            top: 10px;
             left: 10px;
             width: 200px;
             height: 20px;
             background-color: gray;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #health-bar {
+            top: 10px;
+        }
+
+        #ammo-bar {
+            top: 40px;
+        }
+
+        #health-fill, #ammo-fill {
+            height: 100%;
             border-radius: 10px;
         }
 
         #health-fill {
-            height: 100%;
             background-color: green;
-            border-radius:
-                            fixed;
-            top: 40px;
-            left: 10px;
-            width: 200px;
-            height: 20px;
-            background-color: gray;
-            border-radius: 10px;
         }
 
         #ammo-fill {
-            height: 100%;
             background-color: yellow;
-            border-radius: 10px;
         }
     </style>
 </head>
@@ -104,7 +99,7 @@
             y: canvas.height / 2,
             width: 40,
             height: 40,
-            speed: Math.min(canvas.width, canvas.height) / 200,
+            speed: 5,
             health: 100,
             ammo: 30,
         };
@@ -122,28 +117,19 @@
         const enemyImage = new Image();
         enemyImage.src = "https://art.pixilart.com/thumb/fe810b5c2ab3a27.png";
 
-        // Event listeners for keyboard
+        // Input handling
         window.addEventListener("keydown", (e) => (keys[e.key] = true));
-        window.addEventListener("keyup", (e) => {
-            keys[e.key] = false;
-            if (e.key === " ") shoot();
-        });
+        window.addEventListener("keyup", (e) => (keys[e.key] = false));
 
-        // Event listeners for mobile buttons
         document.querySelectorAll(".controls button").forEach((button) => {
-            button.addEventListener("mousedown", () => handleControl(button.id, true));
-            button.addEventListener("mouseup", () => handleControl(button.id, false));
+            button.addEventListener("mousedown", () => mobileControls[button.id] = true);
+            button.addEventListener("mouseup", () => mobileControls[button.id] = false);
         });
-
-        function handleControl(control, state) {
-            mobileControls[control] = state;
-            if (control === "shoot" && state) shoot();
-        }
 
         function shoot() {
             if (player.ammo > 0) {
                 bullets.push({
-                    x: player.x + player.width / 2 - 5,
+                    x: player.x + player.width / 2 - 2.5,
                     y: player.y,
                     width: 5,
                     height: 10,
@@ -155,51 +141,50 @@
 
         function spawnEnemy() {
             enemies.push({
-                x: Math.random() * (canvas.width - 30), // Spawn fully within bounds
-                y: 0, // Spawn from the top
+                x: Math.random() * (canvas.width - 30),
+                y: 0,
                 width: 30,
                 height: 30,
                 speed: 2,
             });
         }
 
-        function isColliding(rect1, rect2) {
+        function isColliding(a, b) {
             return (
-                rect1.x < rect2.x + rect2.width &&
-                rect1.x + rect1.width > rect2.x &&
-                rect1.y < rect2.y + rect2.height &&
-                rect1.y + rect1.height > rect2.y
+                a.x < b.x + b.width &&
+                a.x + a.width > b.x &&
+                a.y < b.y + b.height &&
+                a.y + a.height > b.y
             );
         }
 
         function update() {
-            // Movement
+            // Player movement
             if (keys["ArrowUp"] || mobileControls.up) player.y -= player.speed;
             if (keys["ArrowDown"] || mobileControls.down) player.y += player.speed;
             if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
             if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
 
-            // Keep player in bounds
             player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
             player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
 
-            // Update bullets
+            // Bullet updates
             bullets.forEach((bullet, index) => {
                 bullet.y += bullet.speed;
                 if (bullet.y < 0) bullets.splice(index, 1);
             });
 
-            // Spawn and update enemies
+            // Enemy updates
             if (Date.now() - lastEnemySpawn > enemySpawnInterval) {
                 spawnEnemy();
-                lastEnemySpawn = Date.now(); // Ensure enemies keep spawning
+                lastEnemySpawn = Date.now();
             }
             enemies.forEach((enemy, index) => {
                 enemy.y += enemy.speed;
-                if (enemy.y > canvas.height) enemies.splice(index, 1); // Remove enemies that go off-screen
+                if (enemy.y > canvas.height) enemies.splice(index, 1);
             });
 
-            // Check collisions
+            // Collision detection
             enemies.forEach((enemy, eIndex) => {
                 bullets.forEach((bullet, bIndex) => {
                     if (isColliding(bullet, enemy)) {
@@ -209,7 +194,7 @@
                 });
 
                 if (isColliding(player, enemy)) {
-                    player.health -= 5;
+                    player.health -= 10;
                     enemies.splice(eIndex, 1);
                 }
             });
@@ -217,18 +202,13 @@
             if (player.health <= 0) {
                 alert("Game Over!");
                 window.location.reload();
-                return; // Exit update loop
+                return;
             }
 
-            // Ammo regeneration
-            if (player.ammo < 30) player.ammo++;
-
-            // Update health bar color
-            const healthBar = document.getElementById("health-fill");
-            healthBar.style.backgroundColor = player.health > 50 ? "green" : player.health > 20 ? "orange" : "red";
+            if (player.ammo < 30) player.ammo += 0.1;
 
             draw();
-            requestAnimationFrame(update); // Always continue the game loop
+            requestAnimationFrame(update);
         }
 
         function draw() {
