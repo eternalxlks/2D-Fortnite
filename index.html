@@ -35,6 +35,13 @@
             cursor: pointer;
         }
 
+        @media (max-width: 600px) {
+            .controls button {
+                width: 40px;
+                height: 40px;
+            }
+        }
+
         #health-bar {
             position: fixed;
             top: 10px;
@@ -47,7 +54,7 @@
 
         #health-fill {
             height: 100%;
-            background-color: red;
+            background-color: green;
             border-radius: 10px;
         }
 
@@ -100,7 +107,7 @@
             y: canvas.height / 2,
             width: 40,
             height: 40,
-            speed: 5,
+            speed: Math.min(canvas.width, canvas.height) / 200,
             health: 100,
             ammo: 30,
         };
@@ -116,7 +123,7 @@
         playerImage.src = "https://art.pixilart.com/thumb/904262a87345e73.png";
 
         const enemyImage = new Image();
-        enemyImage.src = "https://art.pixilart.com/thumb/fe810b5c2ab3a27.png"; // Replace with actual enemy image URL
+        enemyImage.src = "https://art.pixilart.com/thumb/fe810b5c2ab3a27.png";
 
         // Event listeners for keyboard
         window.addEventListener("keydown", (e) => (keys[e.key] = true));
@@ -151,13 +158,21 @@
 
         function spawnEnemy() {
             enemies.push({
-                x: Math.random() * canvas.width,
+                x: Math.random() * (canvas.width - 30), // Spawn fully within bounds
                 y: 0, // Spawn from the top
                 width: 30,
                 height: 30,
-                health: 100,
                 speed: 2,
             });
+        }
+
+        function isColliding(rect1, rect2) {
+            return (
+                rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.y + rect1.height > rect2.y
+            );
         }
 
         function update() {
@@ -190,31 +205,31 @@
             // Check collisions
             enemies.forEach((enemy, eIndex) => {
                 bullets.forEach((bullet, bIndex) => {
-                    if (
-                        bullet.x < enemy.x + enemy.width &&
-                        bullet.x + bullet.width > enemy.x &&
-                        bullet.y < enemy.y + enemy.height &&
-                        bullet.y + bullet.height > enemy.y
-                    ) {
-                        // Bullet hits enemy
+                    if (isColliding(bullet, enemy)) {
                         enemies.splice(eIndex, 1);
                         bullets.splice(bIndex, 1);
                     }
                 });
 
-                // Enemy hits player
-                if (
-                    player.x < enemy.x + enemy.width &&
-                    player.x + player.width > enemy.x &&
-                    player.y < enemy.y + enemy.height &&
-                    player.y + player.height > enemy.y
-                ) {
+                if (isColliding(player, enemy)) {
                     player.health -= 5;
                     enemies.splice(eIndex, 1);
                 }
             });
 
-            // Draw everything
+            if (player.health <= 0) {
+                alert("Game Over!");
+                window.location.reload();
+                return;
+            }
+
+            // Ammo regeneration
+            if (player.ammo < 30) player.ammo++;
+
+            // Update health bar color
+            const healthBar = document.getElementById("health-fill");
+            healthBar.style.backgroundColor = player.health > 50 ? "green" : player.health > 20 ? "orange" : "red";
+
             draw();
             requestAnimationFrame(update);
         }
@@ -245,4 +260,3 @@
     </script>
 </body>
 </html>
-
