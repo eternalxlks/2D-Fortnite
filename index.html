@@ -55,11 +55,8 @@
         #health-fill {
             height: 100%;
             background-color: green;
-            border-radius: 10px;
-        }
-
-        #ammo-bar {
-            position: fixed;
+            border-radius:
+                            fixed;
             top: 40px;
             left: 10px;
             width: 200px;
@@ -195,7 +192,7 @@
             // Spawn and update enemies
             if (Date.now() - lastEnemySpawn > enemySpawnInterval) {
                 spawnEnemy();
-                lastEnemySpawn = Date.now();
+                lastEnemySpawn = Date.now(); // Ensure enemies keep spawning
             }
             enemies.forEach((enemy, index) => {
                 enemy.y += enemy.speed;
@@ -220,7 +217,7 @@
             if (player.health <= 0) {
                 alert("Game Over!");
                 window.location.reload();
-                return;
+                return; // Exit update loop
             }
 
             // Ammo regeneration
@@ -231,7 +228,7 @@
             healthBar.style.backgroundColor = player.health > 50 ? "green" : player.health > 20 ? "orange" : "red";
 
             draw();
-            requestAnimationFrame(update);
+            requestAnimationFrame(update); // Always continue the game loop
         }
 
         function draw() {
