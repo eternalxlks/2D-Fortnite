@@ -6,8 +6,8 @@ Shooting: Press Space to shoot bullets.
 Enemies: Random enemies fall and you shoot
 Weapong Pickup: Move over them
 # Weapons/Game
-Red Block: Enemies that deal damage'
-Gold/Grey blocks: Gold: Pistol, Grey: Rifle
-Blue Block: You/Player
+You/Player: Jonesy
+Enemies: Zombies
+All Colored Squares: Any weapon
 # Updates
 I update this once every month
