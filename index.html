@@ -12,7 +12,7 @@
 
         canvas {
             display: block;
-            background: #87CEEB;
+            background: linear-gradient(to bottom, #87CEEB, #B0E0E6); /* Gradient sky background */
         }
 
         .controls {
@@ -42,11 +42,13 @@
             width: 200px;
             height: 20px;
             background-color: gray;
+            border-radius: 10px;
         }
 
         #health-fill {
             height: 100%;
             background-color: red;
+            border-radius: 10px;
         }
 
         #ammo-bar {
@@ -56,11 +58,13 @@
             width: 200px;
             height: 20px;
             background-color: gray;
+            border-radius: 10px;
         }
 
         #ammo-fill {
             height: 100%;
             background-color: yellow;
+            border-radius: 10px;
         }
     </style>
 </head>
@@ -100,9 +104,9 @@
         const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
-            width: 30 * scaleFactor,
-            height: 30 * scaleFactor,
-            color: "blue",
+            width: 40 * scaleFactor,
+            height: 40 * scaleFactor,
+            color: "blue", // Placeholder color
             speed: 5 * scaleFactor,
             health: 100,
             ammo: 30,
@@ -111,13 +115,13 @@
         };
 
         const weapons = [
-            { x: 300 * scaleFactor, y: 200 * scaleFactor, width: 20 * scaleFactor, height: 20 * scaleFactor, color: "gold", type: "pistol", rarity: "common" },
-            { x: 500 * scaleFactor, y: 400 * scaleFactor, width: 20 * scaleFactor, height: 20 * scaleFactor, color: "silver", type: "rifle", rarity: "legendary" }
+            { x: 300 * scaleFactor, y: 200 * scaleFactor, width: 40 * scaleFactor, height: 40 * scaleFactor, color: "gold", type: "pistol", rarity: "common", ammo: 30 },
+            { x: 500 * scaleFactor, y: 400 * scaleFactor, width: 50 * scaleFactor, height: 50 * scaleFactor, color: "silver", type: "rifle", rarity: "legendary", ammo: 100 }
         ];
 
         const ammoItems = [
-            { x: 100 * scaleFactor, y: 100 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green" },
-            { x: 700 * scaleFactor, y: 500 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green" }
+            { x: 100 * scaleFactor, y: 100 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green", ammo: 10 },
+            { x: 700 * scaleFactor, y: 500 * scaleFactor, width: 15 * scaleFactor, height: 15 * scaleFactor, color: "green", ammo: 10 }
         ];
 
         const bullets = [];
@@ -134,6 +138,13 @@
 
         let enemySpawnCooldown = 1000; // 1 second cooldown between spawns
         let lastEnemySpawnTime = 0; // Track the time of the last spawn
+
+        // Load images for player and enemy
+        const playerImage = new Image();
+        playerImage.src = '<img src="https://art.pixilart.com/thumb/904262a87345e73.png" alt="fortnite pixel by azin877 - Pixilart"/>'; // Replace with actual image URL
+
+        const enemyImage = new Image();
+        enemyImage.src = '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAeFBMVEX///8AAAAAPZkWoIU0mNthYWHc3NwTinMAFzoAP54tg702neMUOlMXpooIPTPj4+NUVFQANYQHNSxiYmIRMki9vb0Uj3b4+PiMjIwQd2Nlt6NlX2EALiEAFDIMWEkYq44kJCRVa2UqgW4JPzVidnEslH4tpYwDFxNaJ03CAAAC2ElEQVR4nO3d63KaUBhG4ViKJlUOFWM8JGkOPdz/HZaNiuwgMLTjwPtlPf/0h8MagU9lh9zcAAAAAAAAAAAAAACu72Fa9TD05lzBdFI1HXpzroBCfYlXmAy9Of9lE4bh5vQgScNClnqFaXZ4OpVMDfOC8PTA3znrJHdX+4VZvuHZ6YG1QjfWE3fEpclxtN83x71kgsdh1zvmybpfb3x6FYbdrzc+9guT7q6zdOit7WtTG+st7t0paegt7ivs8/6pDYkChfqF9o9Dx/a51LE/DymkcPwopHD8KKRw/Cg0UridHayXVgtnUVCIYrOFAYVmCp/jOG45FvULgyi3Nl3ozCgUU99LTRcWZ5rX5HhFcbn++BnAQGF8ynBXhePo4/ywVBhSqKOh8Ocyjp9NF+7cWbX2Oc5U4cVPqhSOkl/opt/ePb2rPmOoMMhn/OzXLve7+szWUOFF589xVgsDC4WR4UK3Xnb/NqtY1wrX+fh//6NaWNhXT5jL+huaT/8f79KF3rKT+OIuex6VkuwXeotqGvbSx4noapNCcloavG080zzKrhgqtYyNYlpIrvrytIx+U4WX3sNIqdD/gztPeRzWve11luj3uh5a2g+92T38W6HSGKTQSKF31X71rd1KsdC7ar+Yf20zX0gWBhSaKmw7Dm0UtljNrRcuKByj47Q4KL62W9tLi7/6fY0Piq/tnuLy/Ur6TFMof3eqf+XLJh/mh7nCkEINm7DxDhdGCltQqI9CfRTqo1Afhfoo1EehPgr1fY5C/3d+tatrXS7fV4lCJRTqc4VP36ueDBbe3n05u7ulUAyF+ijUR6E+CvVRqI9CfRTqo1Afhfoo1EehPgr1UaiPQn0U6qNQH4X6KNT3OQrtr6exvyaKQm2Z5UJ3m8/sxXJhyw2WKBRhu7C896XZwo5/CmygsOOfO1MooGMv1b25bilpvunnVP7mugAAAAAAAAAAAAAwGn8BkORITvzCP6EAAAAASUVORK5CYII=" alt="Pixilart - Fortnite Zombie by ruth5123"/>'; // Replace with actual image URL
 
         // Event listeners for keyboard input
         window.addEventListener("keydown", (e) => {
@@ -182,6 +193,12 @@
             if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
             if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
 
+            // Prevent player from moving off-screen
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+            if (player.y < 0) player.y = 0;
+            if (player.y + player.height > canvas.height) player.y = canvas.height - player.height;
+
             // Check for weapon pickup
             weapons.forEach((weapon, index) => {
                 if (player.x < weapon.x + weapon.width &&
@@ -190,7 +207,9 @@
                     player.y + player.height > weapon.y) {
                     if (player.inventory.length < 2) {
                         player.inventory.push(weapon);
-                        weapons.splice(index, 1); // Remove weapon after pickup
+                        player.ammo += weapon.ammo; // Replenish ammo on pickup
+                        weapons.splice(index, 1);
+                        pickupSound.play(); // Play pickup sound
                     }
                 }
             });
@@ -201,115 +220,99 @@
                     player.x + player.width > ammo.x &&
                     player.y < ammo.y + ammo.height &&
                     player.y + player.height > ammo.y) {
-                    player.ammo += 10;
+                    player.ammo += ammo.ammo;
                     ammoItems.splice(index, 1);
                 }
             });
 
-            // Spawn enemies if conditions are met
-            if (defeatedEnemies < 100 && (Date.now() - lastEnemySpawnTime > enemySpawnCooldown)) {
+            // Enemy spawn logic
+            let currentTime = Date.now();
+            if (currentTime - lastEnemySpawnTime >= enemySpawnCooldown) {
                 spawnEnemy();
-                lastEnemySpawnTime = Date.now();
+                lastEnemySpawnTime = currentTime;
             }
 
-            // Update bullets
-            bullets.forEach((bullet, index) => {
-                bullet.y -= bullet.speed;
-                if (bullet.y < 0) bullets.splice(index, 1);
+            // Enemy movement logic (following player)
+            enemies.forEach(enemy => {
+                let dx = player.x - enemy.x;
+                let dy = player.y - enemy.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > 1) {
+                    enemy.x += (dx / distance) * 2;
+                    enemy.y += (dy / distance) * 2;
+                }
             });
 
-            // Bullet-enemy collisions
-            bullets.forEach((bullet, bIndex) => {
-                enemies.forEach((enemy, eIndex) => {
+            // Bullet-enemy collision check
+            bullets.forEach((bullet, bulletIndex) => {
+                enemies.forEach((enemy, enemyIndex) => {
                     if (bullet.x < enemy.x + enemy.width &&
                         bullet.x + bullet.width > enemy.x &&
                         bullet.y < enemy.y + enemy.height &&
                         bullet.y + bullet.height > enemy.y) {
-                        bullets.splice(bIndex, 1);
-                        enemies.splice(eIndex, 1);
-                        defeatedEnemies++;
+                        enemy.health -= 20;
+                        if (enemy.health <= 0) {
+                            enemies.splice(enemyIndex, 1);
+                            defeatedEnemies++;
+                        }
+                        bullets.splice(bulletIndex, 1); // Remove bullet
                     }
                 });
             });
 
-            // Update enemies (slow following player)
-            enemies.forEach((enemy) => {
-                const dx = player.x - enemy.x;
-                const dy = player.y - enemy.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance > 1) {
-                    enemy.x += (dx / distance) * 2 * scaleFactor;
-                    enemy.y += (dy / distance) * 2 * scaleFactor;
-                }
-            });
-
-            // Check win condition: Defeat 100 enemies
-            if (defeatedEnemies >= 100) {
-                ctx.fillStyle = "black";
-                ctx.font = "30px Arial";
-                ctx.fillText("You Win!", canvas.width / 2 - 75, canvas.height / 2);
-                return;
-            }
-
-            // Health check: reset player if health is 0
-            if (player.health <= 0) {
-                resetGame();
-            }
-
-            // Draw everything
+            // Drawing everything on canvas
             draw();
+
+            // Request the next animation frame
             requestAnimationFrame(update);
         }
 
-        // Function to draw everything
+        // Drawing all game elements
         function draw() {
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
 
-            // Draw player
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.width, player.height);
+            // Draw player with an image
+            ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
+
+            // Draw weapons
+            weapons.forEach(weapon => {
+                ctx.fillStyle = weapon.color;
+                ctx.fillRect(weapon.x, weapon.y, weapon.width, weapon.height);
+            });
+
+            // Draw ammo items
+            ammoItems.forEach(ammo => {
+                ctx.fillStyle = ammo.color;
+                ctx.fillRect(ammo.x, ammo.y, ammo.width, ammo.height);
+            });
 
             // Draw bullets
-            bullets.forEach((bullet) => {
+            bullets.forEach(bullet => {
                 ctx.fillStyle = bullet.color;
                 ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             });
 
             // Draw enemies
-            enemies.forEach((enemy) => {
-                ctx.fillStyle = "red";
-                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            enemies.forEach(enemy => {
+                ctx.drawImage(enemyImage, enemy.x, enemy.y, enemy.width, enemy.height);
             });
 
             // Draw health bar
-            document.getElementById("health-fill").style.width = `${player.health}%`;
-
+            document.getElementById("health-fill").style.width = (player.health) + "%";
             // Draw ammo bar
-            document.getElementById("ammo-fill").style.width = `${(player.ammo / 30) * 100}%`;
+            document.getElementById("ammo-fill").style.width = (player.ammo / 30) * 100 + "%";
         }
 
-        // Spawn a new enemy
+        // Function to spawn enemies
         function spawnEnemy() {
             const enemy = {
-                x: Math.random() * (canvas.width - 30),
-                y: Math.random() * (canvas.height - 30),
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
                 width: 30 * scaleFactor,
                 height: 30 * scaleFactor,
-                speed: 1 * scaleFactor
+                health: 100
             };
             enemies.push(enemy);
-        }
-
-        // Reset the game
-        function resetGame() {
-            player.x = canvas.width / 2;
-            player.y = canvas.height / 2;
-            player.health = 100;
-            player.ammo = 30;
-            defeatedEnemies = 0;
-            enemies.length = 0;
         }
 
         // Start the game loop
