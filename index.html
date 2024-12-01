@@ -238,9 +238,9 @@
                 const dy = player.y - enemy.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
-                if (distance > 0) {
-                    enemy.x += (dx / distance) * enemy.speed;
-                    enemy.y += (dy / distance) * enemy.speed;
+                if (distance > 1) {
+                    enemy.x += (dx / distance) * 2 * scaleFactor;
+                    enemy.y += (dy / distance) * 2 * scaleFactor;
                 }
             });
 
