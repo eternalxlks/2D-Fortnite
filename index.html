@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Fighter</title>
+    <title>2D Fortnite</title>
     <style>
         body {
             margin: 0;
@@ -12,30 +12,10 @@
 
         canvas {
             display: block;
-            background: linear-gradient(to bottom, #87CEEB, #B0E0E6);
+            background: linear-gradient(to bottom, #87CEEB, #228B22);
         }
 
-        .controls {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-        }
-
-        .controls button {
-            width: 60px;
-            height: 60px;
-            font-size: 20px;
-            background-color: #333;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-        }
-
-        #health-bar, #ammo-bar {
+        #health-bar, #shield-bar, #ammo-bar {
             position: fixed;
             left: 10px;
             width: 200px;
@@ -49,35 +29,37 @@
             top: 10px;
         }
 
-        #ammo-bar {
+        #shield-bar {
             top: 40px;
         }
 
-        #health-fill, #ammo-fill {
-            height: 100%;
-            border-radius: 10px;
+        #ammo-bar {
+            top: 70px;
         }
 
         #health-fill {
-            background-color: green;
+            background-color: red;
+            height: 100%;
+        }
+
+        #shield-fill {
+            background-color: blue;
+            height: 100%;
         }
 
         #ammo-fill {
             background-color: yellow;
+            height: 100%;
         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <div class="controls">
-        <button id="left">⬅️</button>
-        <button id="up">⬆️</button>
-        <button id="right">➡️</button>
-        <button id="down">⬇️</button>
-        <button id="shoot">🔫</button>
-    </div>
     <div id="health-bar">
         <div id="health-fill"></div>
+    </div>
+    <div id="shield-bar">
+        <div id="shield-fill"></div>
     </div>
     <div id="ammo-bar">
         <div id="ammo-fill"></div>
@@ -86,136 +68,147 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
+        // Resize canvas
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
-
         window.addEventListener("resize", resizeCanvas);
         resizeCanvas();
 
+        // Game variables
         const player = {
             x: canvas.width / 2,
-            y: canvas.height / 2,
+            y: canvas.height - 100,
             width: 40,
             height: 40,
             speed: 5,
             health: 100,
-            ammo: 30,
+            shield: 50,
+            currentWeapon: "pistol",
         };
 
+        const weapons = {
+            pistol: { damage: 10, fireRate: 300, bulletSpeed: 8, ammo: 30, maxAmmo: 30 },
+            shotgun: { damage: 20, fireRate: 600, bulletSpeed: 5, ammo: 10, maxAmmo: 10 },
+            sniper: { damage: 50, fireRate: 1000, bulletSpeed: 15, ammo: 5, maxAmmo: 5 },
+        };
+
+        let bullets = [];
+        let enemies = [];
+        let walls = [];
+        const storm = { radius: canvas.width / 2, x: canvas.width / 2, y: canvas.height / 2, shrinkRate: 0.5 };
+        let lastShot = 0;
+
+        // Input
         const keys = {};
-        const mobileControls = { left: false, up: false, right: false, down: false, shoot: false };
-        const bullets = [];
-        const enemies = [];
-        const enemySpawnInterval = 2000; // 2 seconds
-        let lastEnemySpawn = Date.now();
-
-        const playerImage = new Image();
-        playerImage.src = "https://art.pixilart.com/thumb/904262a87345e73.png";
-
-        const enemyImage = new Image();
-        enemyImage.src = "https://art.pixilart.com/thumb/fe810b5c2ab3a27.png";
-
-        // Input handling
         window.addEventListener("keydown", (e) => (keys[e.key] = true));
         window.addEventListener("keyup", (e) => (keys[e.key] = false));
 
-        document.querySelectorAll(".controls button").forEach((button) => {
-            button.addEventListener("mousedown", () => mobileControls[button.id] = true);
-            button.addEventListener("mouseup", () => mobileControls[button.id] = false);
-        });
-
+        // Shooting
         function shoot() {
-            if (player.ammo > 0) {
+            const weapon = weapons[player.currentWeapon];
+            if (weapon.ammo > 0 && Date.now() - lastShot > weapon.fireRate) {
                 bullets.push({
-                    x: player.x + player.width / 2 - 2.5,
+                    x: player.x + player.width / 2,
                     y: player.y,
                     width: 5,
-                    height: 10,
-                    speed: -10,
+                    height: 5,
+                    speed: weapon.bulletSpeed,
+                    damage: weapon.damage,
                 });
-                player.ammo--;
+                weapon.ammo--;
+                lastShot = Date.now();
             }
         }
 
+        // Building
+        function buildWall() {
+            if (walls.length < 10) {
+                walls.push({
+                    x: player.x + player.width,
+                    y: player.y,
+                    width: 40,
+                    height: 40,
+                });
+            }
+        }
+
+        // Spawn enemies
         function spawnEnemy() {
+            const size = 30;
             enemies.push({
-                x: Math.random() * (canvas.width - 30),
+                x: Math.random() * canvas.width,
                 y: 0,
-                width: 30,
-                height: 30,
+                width: size,
+                height: size,
                 speed: 2,
+                health: 50,
             });
         }
 
-        function isColliding(a, b) {
-            return (
-                a.x < b.x + b.width &&
-                a.x + a.width > b.x &&
-                a.y < b.y + b.height &&
-                a.y + a.height > b.y
-            );
-        }
-
+        // Update
         function update() {
             // Player movement
-            if (keys["ArrowUp"] || mobileControls.up) player.y -= player.speed;
-            if (keys["ArrowDown"] || mobileControls.down) player.y += player.speed;
-            if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
-            if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
+            if (keys["w"]) player.y -= player.speed;
+            if (keys["s"]) player.y += player.speed;
+            if (keys["a"]) player.x -= player.speed;
+            if (keys["d"]) player.x += player.speed;
 
-            player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
-            player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
+            // Shooting
+            if (keys[" "]) shoot();
 
-            // Bullet updates
-            bullets.forEach((bullet, index) => {
-                bullet.y += bullet.speed;
-                if (bullet.y < 0) bullets.splice(index, 1);
+            // Build walls
+            if (keys["e"]) buildWall();
+
+            // Storm shrinking
+            storm.radius -= storm.shrinkRate;
+            if (storm.radius < 0) storm.radius = 0;
+
+            // Bullets movement
+            bullets = bullets.filter((bullet) => {
+                bullet.y -= bullet.speed;
+                return bullet.y > 0;
             });
 
-            // Enemy updates
-            if (Date.now() - lastEnemySpawn > enemySpawnInterval) {
-                spawnEnemy();
-                lastEnemySpawn = Date.now();
-            }
-            enemies.forEach((enemy, index) => {
+            // Enemies movement
+            enemies.forEach((enemy) => {
                 enemy.y += enemy.speed;
-                if (enemy.y > canvas.height) enemies.splice(index, 1);
-            });
-
-            // Collision detection
-            enemies.forEach((enemy, eIndex) => {
-                bullets.forEach((bullet, bIndex) => {
-                    if (isColliding(bullet, enemy)) {
-                        enemies.splice(eIndex, 1);
-                        bullets.splice(bIndex, 1);
+                if (isColliding(enemy, player)) {
+                    if (player.shield > 0) {
+                        player.shield -= 10;
+                    } else {
+                        player.health -= 10;
                     }
-                });
-
-                if (isColliding(player, enemy)) {
-                    player.health -= 10;
-                    enemies.splice(eIndex, 1);
                 }
             });
 
-            if (player.health <= 0) {
+            // Remove dead enemies
+            enemies = enemies.filter((enemy) => enemy.health > 0 && enemy.y < canvas.height);
+
+            // Drawing
+            draw();
+            if (player.health > 0) {
+                requestAnimationFrame(update);
+            } else {
                 alert("Game Over!");
                 window.location.reload();
-                return;
             }
-
-            if (player.ammo < 30) player.ammo += 0.1;
-
-            draw();
-            requestAnimationFrame(update);
         }
 
+        // Drawing
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Draw storm
+            ctx.beginPath();
+            ctx.arc(storm.x, storm.y, storm.radius, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 0, 0, 0.3)";
+            ctx.fill();
+
             // Draw player
-            ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
+            ctx.fillStyle = "green";
+            ctx.fillRect(player.x, player.y, player.width, player.height);
 
             // Draw bullets
             bullets.forEach((bullet) => {
@@ -225,13 +218,33 @@
 
             // Draw enemies
             enemies.forEach((enemy) => {
-                ctx.drawImage(enemyImage, enemy.x, enemy.y, enemy.width, enemy.height);
+                ctx.fillStyle = "red";
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
             });
 
-            // Update health and ammo bars
+            // Draw walls
+            walls.forEach((wall) => {
+                ctx.fillStyle = "gray";
+                ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+            });
+
+            // Update health and shield bars
             document.getElementById("health-fill").style.width = `${player.health}%`;
-            document.getElementById("ammo-fill").style.width = `${(player.ammo / 30) * 100}%`;
+            document.getElementById("shield-fill").style.width = `${player.shield}%`;
         }
+
+        // Collision detection
+        function isColliding(a, b) {
+            return (
+                a.x < b.x + b.width &&
+                a.x + a.width > b.x &&
+                a.y < b.y + b.height &&
+                a.y + a.height > b.y
+            );
+        }
+
+        // Spawn enemies periodically
+        setInterval(spawnEnemy, 2000);
 
         update();
     </script>
