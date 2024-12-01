@@ -103,7 +103,6 @@
             speed: 5,
             health: 100,
             ammo: 30,
-            weapon: null,
         };
 
         const keys = {};
@@ -117,14 +116,16 @@
         playerImage.src = "https://art.pixilart.com/thumb/904262a87345e73.png";
 
         const enemyImage = new Image();
-        enemyImage.src = "data:image/png;base64,...";
+        enemyImage.src = "https://art.pixilart.com/thumb/fe810b5c2ab3a27.png"; // Replace with actual enemy image URL
 
+        // Event listeners for keyboard
         window.addEventListener("keydown", (e) => (keys[e.key] = true));
         window.addEventListener("keyup", (e) => {
             keys[e.key] = false;
             if (e.key === " ") shoot();
         });
 
+        // Event listeners for mobile buttons
         document.querySelectorAll(".controls button").forEach((button) => {
             button.addEventListener("mousedown", () => handleControl(button.id, true));
             button.addEventListener("mouseup", () => handleControl(button.id, false));
@@ -137,7 +138,13 @@
 
         function shoot() {
             if (player.ammo > 0) {
-                bullets.push({ x: player.x + player.width / 2 - 5, y: player.y, width: 5, height: 10, speed: -10 });
+                bullets.push({
+                    x: player.x + player.width / 2 - 5,
+                    y: player.y,
+                    width: 5,
+                    height: 10,
+                    speed: -10,
+                });
                 player.ammo--;
             }
         }
@@ -145,62 +152,91 @@
         function spawnEnemy() {
             enemies.push({
                 x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
+                y: 0, // Spawn from the top
                 width: 30,
                 height: 30,
                 health: 100,
+                speed: 2,
             });
         }
 
         function update() {
+            // Movement
             if (keys["ArrowUp"] || mobileControls.up) player.y -= player.speed;
             if (keys["ArrowDown"] || mobileControls.down) player.y += player.speed;
             if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
             if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
 
+            // Keep player in bounds
             player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
             player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
 
+            // Update bullets
             bullets.forEach((bullet, index) => {
                 bullet.y += bullet.speed;
                 if (bullet.y < 0) bullets.splice(index, 1);
             });
 
-            enemies.forEach((enemy, index) => {
-                const dx = player.x - enemy.x;
-                const dy = player.y - enemy.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                enemy.x += (dx / dist) * 2;
-                enemy.y += (dy / dist) * 2;
-
-                if (dist < 30) {
-                    player.health -= 1;
-                }
-            });
-
+            // Spawn and update enemies
             if (Date.now() - lastEnemySpawn > enemySpawnInterval) {
                 spawnEnemy();
                 lastEnemySpawn = Date.now();
             }
+            enemies.forEach((enemy, index) => {
+                enemy.y += enemy.speed;
+                if (enemy.y > canvas.height) enemies.splice(index, 1); // Remove enemies that go off-screen
+            });
 
+            // Check collisions
+            enemies.forEach((enemy, eIndex) => {
+                bullets.forEach((bullet, bIndex) => {
+                    if (
+                        bullet.x < enemy.x + enemy.width &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + bullet.height > enemy.y
+                    ) {
+                        // Bullet hits enemy
+                        enemies.splice(eIndex, 1);
+                        bullets.splice(bIndex, 1);
+                    }
+                });
+
+                // Enemy hits player
+                if (
+                    player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y
+                ) {
+                    player.health -= 5;
+                    enemies.splice(eIndex, 1);
+                }
+            });
+
+            // Draw everything
             draw();
             requestAnimationFrame(update);
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw player
             ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
 
+            // Draw bullets
             bullets.forEach((bullet) => {
                 ctx.fillStyle = "yellow";
                 ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             });
 
+            // Draw enemies
             enemies.forEach((enemy) => {
                 ctx.drawImage(enemyImage, enemy.x, enemy.y, enemy.width, enemy.height);
             });
 
+            // Update health and ammo bars
             document.getElementById("health-fill").style.width = `${player.health}%`;
             document.getElementById("ammo-fill").style.width = `${(player.ammo / 30) * 100}%`;
         }
@@ -209,3 +245,4 @@
     </script>
 </body>
 </html>
+
