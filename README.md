@@ -1,5 +1,5 @@
-# 2D-Fortnite
-Pretty Much 2D Fortnite 
+# 2D-Fighter
+Pretty Much a 2D survival game
 # How To Play/Controls
 Player: Move with arrow keys (Left and Right).
 Shooting: Press Space to shoot bullets.
