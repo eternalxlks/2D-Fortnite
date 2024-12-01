@@ -51,6 +51,18 @@
             background-color: yellow;
             height: 100%;
         }
+
+        #kill-streak {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
     </style>
 </head>
 <body>
@@ -64,6 +76,7 @@
     <div id="ammo-bar">
         <div id="ammo-fill"></div>
     </div>
+    <div id="kill-streak">Kill Streak: 0</div>
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
@@ -99,6 +112,7 @@
         let walls = [];
         const storm = { radius: canvas.width / 2, x: canvas.width / 2, y: canvas.height / 2, shrinkRate: 0.5 };
         let lastShot = 0;
+        let killStreak = 0;
 
         // Input
         const keys = {};
@@ -110,7 +124,7 @@
             const weapon = weapons[player.currentWeapon];
             if (weapon.ammo > 0 && Date.now() - lastShot > weapon.fireRate) {
                 bullets.push({
-                    x: player.x + player.width / 2,
+                    x: player.x + player.width / 2 - 2.5,
                     y: player.y,
                     width: 5,
                     height: 5,
@@ -171,20 +185,33 @@
                 return bullet.y > 0;
             });
 
-            // Enemies movement
-            enemies.forEach((enemy) => {
+            // Enemies movement and check collisions
+            enemies.forEach((enemy, enemyIndex) => {
                 enemy.y += enemy.speed;
+
+                // Check collision with bullets
+                bullets.forEach((bullet, bulletIndex) => {
+                    if (isColliding(enemy, bullet)) {
+                        enemy.health -= bullet.damage;
+                        bullets.splice(bulletIndex, 1); // Remove bullet
+                        if (enemy.health <= 0) {
+                            enemies.splice(enemyIndex, 1); // Remove enemy
+                            killStreak++; // Increment kill streak
+                            document.getElementById("kill-streak").innerText = `Kill Streak: ${killStreak}`;
+                        }
+                    }
+                });
+
+                // Check collision with player
                 if (isColliding(enemy, player)) {
                     if (player.shield > 0) {
                         player.shield -= 10;
                     } else {
                         player.health -= 10;
                     }
+                    enemies.splice(enemyIndex, 1); // Remove enemy after collision
                 }
             });
-
-            // Remove dead enemies
-            enemies = enemies.filter((enemy) => enemy.health > 0 && enemy.y < canvas.height);
 
             // Drawing
             draw();
@@ -228,9 +255,10 @@
                 ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
             });
 
-            // Update health and shield bars
+            // Update health, shield, and ammo bars
             document.getElementById("health-fill").style.width = `${player.health}%`;
             document.getElementById("shield-fill").style.width = `${player.shield}%`;
+            document.getElementById("ammo-fill").style.width = `${(weapons[player.currentWeapon].ammo / weapons[player.currentWeapon].maxAmmo) * 100}%`;
         }
 
         // Collision detection
