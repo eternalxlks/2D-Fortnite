@@ -86,6 +86,8 @@ function spawnAmmoBox() {
 
 // Update the game state
 function update() {
+    ctx.drawImage(new Image("pixil-frame-0.png"), 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    
     // Player movement
     if (keys["w"]) player.y -= player.speed;
     if (keys["s"]) player.y += player.speed;
