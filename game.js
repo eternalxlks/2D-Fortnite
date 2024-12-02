@@ -34,10 +34,9 @@ const storm = {
 
 let bullets = [];
 let enemies = [];
-let walls = [];
+let ammoBoxes = [];
 let lastShot = 0;
 let killStreak = 0;
-let ammoBoxes = [];
 
 // Input
 const keys = {};
@@ -69,8 +68,9 @@ function spawnEnemy() {
         y: 0,
         width: size,
         height: size,
-        speed: 2,
+        speed: 1, // Slower speed to follow the player
         health: 50,
+        damage: 10, // The damage the enemy does to the player
     });
 }
 
@@ -107,7 +107,10 @@ function update() {
 
     // Enemies movement and checking collisions
     enemies.forEach((enemy, enemyIndex) => {
-        enemy.y += enemy.speed;
+        // Make enemies follow the player slowly
+        const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+        enemy.x += Math.cos(angle) * enemy.speed;
+        enemy.y += Math.sin(angle) * enemy.speed;
 
         // Check collision with bullets
         bullets.forEach((bullet, bulletIndex) => {
@@ -125,9 +128,9 @@ function update() {
         // Check collision with player
         if (isColliding(enemy, player)) {
             if (player.shield > 0) {
-                player.shield -= 10;
+                player.shield -= enemy.damage;
             } else {
-                player.health -= 10;
+                player.health -= enemy.damage;
             }
             enemies.splice(enemyIndex, 1); // Remove enemy after collision
         }
