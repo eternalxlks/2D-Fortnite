@@ -98,21 +98,26 @@
             speed: 5,
             health: 100,
             shield: 50,
-            currentWeapon: "pistol",
         };
 
         const weapons = {
             pistol: { damage: 10, fireRate: 300, bulletSpeed: 8, ammo: 30, maxAmmo: 30 },
-            shotgun: { damage: 20, fireRate: 600, bulletSpeed: 5, ammo: 10, maxAmmo: 10 },
-            sniper: { damage: 50, fireRate: 1000, bulletSpeed: 15, ammo: 5, maxAmmo: 5 },
+        };
+
+        const storm = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: canvas.width / 2,
+            shrinkRate: canvas.width / (2 * 120), // Shrinks over 120 seconds
+            damage: 1,
         };
 
         let bullets = [];
         let enemies = [];
-        let walls = [];
-        const storm = { radius: canvas.width / 2, x: canvas.width / 2, y: canvas.height / 2, shrinkRate: 0.5 };
+        let ammoBoxes = [];
         let lastShot = 0;
         let killStreak = 0;
+        const gameInterval = 1000 / 60; // 60 frames per second
 
         // Input
         const keys = {};
@@ -121,7 +126,7 @@
 
         // Shooting
         function shoot() {
-            const weapon = weapons[player.currentWeapon];
+            const weapon = weapons.pistol;
             if (weapon.ammo > 0 && Date.now() - lastShot > weapon.fireRate) {
                 bullets.push({
                     x: player.x + player.width / 2 - 2.5,
@@ -136,32 +141,33 @@
             }
         }
 
-        // Building
-        function buildWall() {
-            if (walls.length < 10) {
-                walls.push({
-                    x: player.x + player.width,
-                    y: player.y,
-                    width: 40,
-                    height: 40,
-                });
-            }
-        }
-
         // Spawn enemies
         function spawnEnemy() {
-            const size = 30;
             enemies.push({
                 x: Math.random() * canvas.width,
-                y: 0,
-                width: size,
-                height: size,
+                y: -30,
+                width: 30,
+                height: 30,
                 speed: 2,
                 health: 50,
+                damage: 10,
             });
         }
+        setInterval(spawnEnemy, 2000); // Spawn every 2 seconds
 
-        // Update
+        // Spawn ammo boxes
+        function spawnAmmoBox() {
+            ammoBoxes.push({
+                x: Math.random() * (canvas.width - 30),
+                y: Math.random() * (canvas.height - 30),
+                width: 20,
+                height: 20,
+                ammo: Math.floor(Math.random() * 10) + 5,
+            });
+        }
+        setInterval(spawnAmmoBox, 5000); // Every 5 seconds
+
+        // Update function
         function update() {
             // Player movement
             if (keys["w"]) player.y -= player.speed;
@@ -172,53 +178,69 @@
             // Shooting
             if (keys[" "]) shoot();
 
-            // Build walls
-            if (keys["e"]) buildWall();
+            // Shrink storm
+            if (storm.radius > 0) storm.radius -= storm.shrinkRate;
 
-            // Storm shrinking
-            storm.radius -= storm.shrinkRate;
-            if (storm.radius < 0) storm.radius = 0;
+            // Storm damage
+            const dx = player.x + player.width / 2 - storm.x;
+            const dy = player.y + player.height / 2 - storm.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance > storm.radius) {
+                if (player.shield > 0) player.shield -= storm.damage;
+                else player.health -= storm.damage;
+            }
 
-            // Bullets movement
+            // Move bullets
             bullets = bullets.filter((bullet) => {
                 bullet.y -= bullet.speed;
                 return bullet.y > 0;
             });
 
-            // Enemies movement and check collisions
+            // Move enemies and check collisions
             enemies.forEach((enemy, enemyIndex) => {
                 enemy.y += enemy.speed;
 
-                // Check collision with bullets
+                // Enemy collision with player
+                if (isColliding(enemy, player)) {
+                    if (player.shield > 0) player.shield -= enemy.damage;
+                    else player.health -= enemy.damage;
+                    enemies.splice(enemyIndex, 1);
+                }
+
+                // Bullet collision with enemies
                 bullets.forEach((bullet, bulletIndex) => {
                     if (isColliding(enemy, bullet)) {
                         enemy.health -= bullet.damage;
-                        bullets.splice(bulletIndex, 1); // Remove bullet
+                        bullets.splice(bulletIndex, 1);
                         if (enemy.health <= 0) {
-                            enemies.splice(enemyIndex, 1); // Remove enemy
-                            killStreak++; // Increment kill streak
+                            enemies.splice(enemyIndex, 1);
+                            killStreak++;
                             document.getElementById("kill-streak").innerText = `Kill Streak: ${killStreak}`;
                         }
                     }
                 });
-
-                // Check collision with player
-                if (isColliding(enemy, player)) {
-                    if (player.shield > 0) {
-                        player.shield -= 10;
-                    } else {
-                        player.health -= 10;
-                    }
-                    enemies.splice(enemyIndex, 1); // Remove enemy after collision
-                }
             });
 
-            // Drawing
+            // Collect ammo boxes
+            ammoBoxes = ammoBoxes.filter((box) => {
+                if (isColliding(box, player)) {
+                    weapons.pistol.ammo = Math.min(
+                        weapons.pistol.ammo + box.ammo,
+                        weapons.pistol.maxAmmo
+                    );
+                    return false;
+                }
+                return true;
+            });
+
+            // Draw everything
             draw();
+
+            // End game
             if (player.health > 0) {
-                requestAnimationFrame(update);
+                setTimeout(update, gameInterval);
             } else {
-                alert("Game Over!");
+                alert("Game Over! You were eliminated.");
                 window.location.reload();
             }
         }
@@ -249,16 +271,16 @@
                 ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
             });
 
-            // Draw walls
-            walls.forEach((wall) => {
-                ctx.fillStyle = "gray";
-                ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+            // Draw ammo boxes
+            ammoBoxes.forEach((box) => {
+                ctx.fillStyle = "gold";
+                ctx.fillRect(box.x, box.y, box.width, box.height);
             });
 
             // Update health, shield, and ammo bars
             document.getElementById("health-fill").style.width = `${player.health}%`;
             document.getElementById("shield-fill").style.width = `${player.shield}%`;
-            document.getElementById("ammo-fill").style.width = `${(weapons[player.currentWeapon].ammo / weapons[player.currentWeapon].maxAmmo) * 100}%`;
+            document.getElementById("ammo-fill").style.width = `${(weapons.pistol.ammo / weapons.pistol.maxAmmo) * 100}%`;
         }
 
         // Collision detection
@@ -270,9 +292,6 @@
                 a.y + a.height > b.y
             );
         }
-
-        // Spawn enemies periodically
-        setInterval(spawnEnemy, 2000);
 
         update();
     </script>
