@@ -76,7 +76,7 @@ function spawnEnemy() {
         width: size,
         height: size,
         speed: 1,
-        health: 50,
+        health: 20, // Reduced health for easier defeat
         damage: 10,
     });
 }
@@ -93,28 +93,78 @@ function spawnAmmoBox() {
 
 // Update the game state
 function update() {
-    // Player movement
-    if (keys["w"]) player.y -= player.speed;
-    if (keys["s"]) player.y += player.speed;
-    if (keys["a"]) player.x -= player.speed;
-    if (keys["d"]) player.x += player.speed;
+    // Player movement with boundary checks
+    if (keys["w"] && player.y > 0) player.y -= player.speed;
+    if (keys["s"] && player.y + player.height < canvas.height) player.y += player.speed;
+    if (keys["a"] && player.x > 0) player.x -= player.speed;
+    if (keys["d"] && player.x + player.width < canvas.width) player.x += player.speed;
 
     // Shooting
     if (keys[" "]) shoot();
 
-    // Bullets movement
+    // Bullets movement and collision with enemies
     bullets = bullets.filter((bullet) => {
-        bullet.y -= bullet.speed;
-        return bullet.y > 0;
+        let hit = false;
+        enemies = enemies.filter((enemy) => {
+            if (
+                bullet.x < enemy.x + enemy.width &&
+                bullet.x + bullet.width > enemy.x &&
+                bullet.y < enemy.y + enemy.height &&
+                bullet.y + bullet.height > enemy.y
+            ) {
+                enemy.health -= bullet.damage;
+                hit = true; // Mark bullet as hitting
+                return enemy.health > 0; // Remove enemy if health <= 0
+            }
+            return true;
+        });
+        return !hit; // Remove bullet if it hits an enemy
     });
+
+    // Enemy movement and collision with player
+    enemies = enemies.filter((enemy) => {
+        enemy.y += enemy.speed;
+
+        // Collision with player
+        if (
+            player.x < enemy.x + enemy.width &&
+            player.x + player.width > enemy.x &&
+            player.y < enemy.y + enemy.height &&
+            player.y + player.height > enemy.y
+        ) {
+            player.health -= enemy.damage;
+            return false; // Remove enemy
+        }
+
+        return enemy.y < canvas.height; // Remove enemies offscreen
+    });
+
+    // Collect ammo boxes
+    ammoBoxes = ammoBoxes.filter((box) => {
+        if (
+            player.x < box.x + box.width &&
+            player.x + player.width > box.x &&
+            player.y < box.y + box.height &&
+            player.y + player.height > box.y
+        ) {
+            weapons.pistol.ammo = Math.min(weapons.pistol.ammo + 10, weapons.pistol.maxAmmo);
+            return false; // Remove ammo box
+        }
+        return true;
+    });
+
+    // Storm shrinking
+    storm.radius -= storm.shrinkRate;
+    if (storm.radius < 0) storm.radius = 0;
 
     // Drawing
     draw();
     if (player.health > 0) {
         requestAnimationFrame(update);
     } else {
-        alert("Game Over!");
-        window.location.reload();
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "white";
+        ctx.fillText("Game Over! Reload to play again.", canvas.width / 2 - 150, canvas.height / 2);
     }
 }
 
