@@ -11,10 +11,10 @@ resizeCanvas();
 
 // Preload images
 const playerImage = new Image();
-playerImage.src = 'images/player.png'; // Replace with the path to your player image
+playerImage.src = 'images/player.png'; // player
 
 const enemyImage = new Image();
-enemyImage.src = 'images/enemy.png'; // Replace with the path to your enemy image
+enemyImage.src = 'images/enemy.png'; // enemy image
 
 // Game variables
 const player = {
@@ -76,7 +76,7 @@ function spawnEnemy() {
         width: size,
         height: size,
         speed: 1,
-        health: 20, // Reduced health for easier defeat
+        health: 20,
         damage: 10,
     });
 }
@@ -113,7 +113,7 @@ function update() {
                 bullet.y + bullet.height > enemy.y
             ) {
                 enemy.health -= bullet.damage;
-                hit = true; // Mark bullet as hitting
+                hit = true;
                 return enemy.health > 0; // Remove enemy if health <= 0
             }
             return true;
@@ -182,7 +182,7 @@ function draw() {
     if (playerImage.complete) {
         ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
     } else {
-        ctx.fillStyle = "green";
+        ctx.fillStyle = "green"; // Fallback color
         ctx.fillRect(player.x, player.y, player.width, player.height);
     }
 
@@ -191,7 +191,7 @@ function draw() {
         if (enemyImage.complete) {
             ctx.drawImage(enemyImage, enemy.x, enemy.y, enemy.width, enemy.height);
         } else {
-            ctx.fillStyle = "red";
+            ctx.fillStyle = "red"; // Fallback color
             ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
         }
     });
